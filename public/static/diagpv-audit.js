@@ -667,19 +667,21 @@ class DiagPVAudit {
     }
 
     generateReportHTML() {
+        // Convertir Map en Array pour faciliter les calculs
+        const modulesArray = Array.from(this.modules.values())
+        
         // Calculer statistiques
-        const totalModules = this.modules.length
-        const okModules = this.modules.filter(m => m.status === 'ok').length
-        const defectModules = this.modules.filter(m => m.status !== 'ok' && m.status !== 'pending').length
+        const totalModules = modulesArray.length
+        const okModules = modulesArray.filter(m => m.status === 'ok').length
+        const defectModules = modulesArray.filter(m => m.status !== 'ok' && m.status !== 'pending').length
         const conformityRate = totalModules > 0 ? ((okModules / totalModules) * 100).toFixed(1) : 0
         
         // Grouper défauts par type
         const defectsByType = {}
-        this.modules.forEach(module => {
-            if (module.defects && module.defects.length > 0) {
-                module.defects.forEach(defect => {
-                    defectsByType[defect] = (defectsByType[defect] || 0) + 1
-                })
+        modulesArray.forEach(module => {
+            if (module.status && module.status !== 'ok' && module.status !== 'pending') {
+                const statusLabel = this.getStatusLabel(module.status)
+                defectsByType[statusLabel] = (defectsByType[statusLabel] || 0) + 1
             }
         })
 
@@ -822,11 +824,10 @@ class DiagPVAudit {
                 </tr>
             </thead>
             <tbody>
-                ${this.modules.filter(m => m.status !== 'ok' && m.status !== 'pending').map(module => `
+                ${modulesArray.filter(m => m.status !== 'ok' && m.status !== 'pending').map(module => `
                     <tr>
-                        <td><strong>${module.id}</strong></td>
+                        <td><strong>${module.module_id}</strong></td>
                         <td>${this.getStatusLabel(module.status)}</td>
-                        <td>${module.defects ? module.defects.map(d => this.getStatusLabel(d)).join(', ') : '-'}</td>
                         <td>${module.comment || '-'}</td>
                     </tr>
                 `).join('')}
@@ -1236,47 +1237,9 @@ class DiagPVAudit {
 
             // Sortie mode sélection après succès
             this.exitMultiSelectMode()
-                this.closeBulkModal()
+            this.closeBulkModal()
 
-                this.showAlert(`✅ ${result.updated} modules mis à jour avec succès !`, 'success')
-            } else if (result.success && result.updated === 0 && result.notFound > 0) {
-                // Modules non trouvés - pas de création automatique, mise à jour locale seulement
-                console.log('⚠️ Modules non trouvés, mise à jour locale uniquement')
-                
-                // Mise à jour locale des modules (création en mémoire)
-                modulesToUpdate.forEach(moduleId => {
-                    let module = this.modules.get(moduleId)
-                    if (!module) {
-                        // Créer le module en local s'il n'existe pas
-                        module = {
-                            module_id: moduleId,
-                            status: 'pending',
-                            comment: null,
-                            technician_id: this.technicianId,
-                            updated_at: new Date().toISOString()
-                        }
-                        this.modules.set(moduleId, module)
-                    }
-                    
-                    // Mettre à jour le statut
-                    module.status = this.bulkActionStatus
-                    if (comment) {
-                        module.comment = comment
-                    }
-                    module.updated_at = new Date().toISOString()
-                    module.technician_id = this.technicianId
-                })
-
-                // Re-rendu interface
-                this.renderModulesGrid()
-                this.updateProgress()
-                this.exitMultiSelectMode()
-                this.closeBulkModal()
-
-                this.showAlert(`⚠️ ${modulesToUpdate.length} modules mis à jour localement (audit non synchronisé avec serveur)`, 'warning')
-            } else {
-                throw new Error(result.message || 'Erreur de mise à jour inconnue')
-            }
+            this.showAlert(`✅ ${modulesToUpdate.length} module(s) mis à jour avec succès !`, 'success')
 
         } catch (error) {
             console.error('❌ Erreur mise à jour en lot:', error)

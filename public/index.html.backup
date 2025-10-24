@@ -1,0 +1,418 @@
+
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>DiagPV Audit - Électroluminescence Photovoltaïque</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <link href="/static/diagpv-styles.css" rel="stylesheet">
+        <style>
+        /* Styles critiques inline pour éviter l'écran noir - VERSION RENFORCÉE */
+        * { box-sizing: border-box; }
+        html, body { 
+            background: #000000 !important; 
+            color: #ffffff !important; 
+            min-height: 100vh !important;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
+            font-weight: bold !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.5 !important;
+        }
+        
+        /* Container et layout */
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px !important; }
+        .grid { display: grid !important; }
+        .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
+        .gap-6 { gap: 24px !important; }
+        .flex { display: flex !important; }
+        .items-center { align-items: center !important; }
+        .justify-center { justify-content: center !important; }
+        .space-x-4 > * + * { margin-left: 16px !important; }
+        .mb-4 { margin-bottom: 16px !important; }
+        .mb-6 { margin-bottom: 24px !important; }
+        .mb-8 { margin-bottom: 32px !important; }
+        .p-6 { padding: 24px !important; }
+        .p-4 { padding: 16px !important; }
+        .px-4 { padding-left: 16px !important; padding-right: 16px !important; }
+        .py-3 { padding-top: 12px !important; padding-bottom: 12px !important; }
+        .text-center { text-align: center !important; }
+        
+        /* Couleurs de fond */
+        .bg-black { background-color: #000000 !important; }
+        .bg-gray-900 { background-color: #111827 !important; }
+        .bg-orange-600 { background-color: #ea580c !important; }
+        .bg-green-600 { background-color: #16a34a !important; }
+        .bg-blue-600 { background-color: #2563eb !important; }
+        .bg-purple-600 { background-color: #9333ea !important; }
+        
+        /* Couleurs de texte */
+        .text-white { color: #ffffff !important; }
+        .text-yellow-400 { color: #facc15 !important; }
+        .text-orange-400 { color: #fb923c !important; }
+        .text-green-400 { color: #4ade80 !important; }
+        .text-blue-400 { color: #60a5fa !important; }
+        .text-gray-300 { color: #d1d5db !important; }
+        .text-gray-400 { color: #9ca3af !important; }
+        
+        /* Bordures */
+        .border { border-width: 1px !important; border-style: solid !important; }
+        .border-2 { border-width: 2px !important; border-style: solid !important; }
+        .border-yellow-400 { border-color: #facc15 !important; }
+        .border-orange-400 { border-color: #fb923c !important; }
+        .border-gray-600 { border-color: #4b5563 !important; }
+        .rounded-lg { border-radius: 8px !important; }
+        
+        /* Tailles de police */
+        .text-xl { font-size: 20px !important; }
+        .text-2xl { font-size: 24px !important; }
+        .text-3xl { font-size: 30px !important; }
+        .text-4xl { font-size: 36px !important; }
+        .font-bold { font-weight: bold !important; }
+        .font-black { font-weight: 900 !important; }
+        
+        /* Éléments interactifs */
+        button, input, select, textarea {
+            padding: 12px 16px !important;
+            border: 2px solid #4b5563 !important;
+            border-radius: 8px !important;
+            background: #000000 !important;
+            color: #ffffff !important;
+            font-weight: bold !important;
+            font-family: inherit !important;
+            cursor: pointer !important;
+        }
+        
+        button:hover {
+            opacity: 0.8 !important;
+            transform: translateY(-1px) !important;
+            transition: all 0.2s !important;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none !important;
+            border-color: #facc15 !important;
+            box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.2) !important;
+        }
+        
+        /* Responsive */
+        @media (min-width: 768px) {
+            .md\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+        }
+        
+        /* Icônes FontAwesome */
+        .fa, .fas { font-family: "Font Awesome 6 Free" !important; font-weight: 900 !important; }
+        
+        /* Classes utilitaires supplémentaires */
+        .inline-flex { display: inline-flex !important; }
+        .w-full { width: 100% !important; }
+        .mr-2 { margin-right: 8px !important; }
+        .mr-4 { margin-right: 16px !important; }
+        .hidden { display: none !important; }
+        
+        /* Animation de chargement */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite !important; }
+        
+        /* Styles sélection multiple */
+        .module-btn.multi-select-mode {
+            position: relative !important;
+            transition: all 0.2s ease !important;
+        }
+        .module-btn.multi-select-mode:hover {
+            transform: scale(1.05) !important;
+            box-shadow: 0 0 10px rgba(250, 204, 21, 0.5) !important;
+        }
+        .module-btn.selected-for-bulk {
+            border: 3px solid #facc15 !important;
+            box-shadow: 0 0 15px rgba(250, 204, 21, 0.8) !important;
+            transform: scale(1.02) !important;
+        }
+        .module-btn.selected-for-bulk::after {
+            content: "✓" !important;
+            position: absolute !important;
+            top: -5px !important;
+            right: -5px !important;
+            background: #facc15 !important;
+            color: #000 !important;
+            width: 20px !important;
+            height: 20px !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 12px !important;
+            font-weight: bold !important;
+        }
+        #multiSelectToggleBtn.active {
+            background-color: #facc15 !important;
+            color: #000000 !important;
+            transform: scale(1.05) !important;
+            box-shadow: 0 0 10px rgba(250, 204, 21, 0.6) !important;
+        }
+        .bulk-action-btn:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+        }
+        body { background: #000 !important; color: #fff !important; min-height: 100vh; font-family: system-ui, -apple-system, sans-serif; font-weight: bold; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+        .bg-black { background-color: #000 !important; }
+        .text-white { color: #fff !important; }
+        .text-yellow-400 { color: #facc15 !important; }
+        .text-orange-400 { color: #fb923c !important; }
+        .text-green-400 { color: #4ade80 !important; }
+        .text-blue-400 { color: #60a5fa !important; }
+        .bg-gray-900 { background-color: #111827 !important; }
+        .bg-orange-600 { background-color: #ea580c !important; }
+        .border-yellow-400 { border-color: #facc15 !important; }
+        .border-orange-400 { border-color: #fb923c !important; }
+        .rounded-lg { border-radius: 8px; }
+        .p-6 { padding: 24px; }
+        .mb-4 { margin-bottom: 16px; }
+        .font-bold { font-weight: bold; }
+        .text-2xl { font-size: 24px; }
+        .text-xl { font-size: 20px; }
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .justify-center { justify-content: center; }
+        .space-x-4 > * + * { margin-left: 16px; }
+        .grid { display: grid; }
+        .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+        @media (min-width: 768px) { .md\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        .gap-6 { gap: 24px; }
+        .border-2 { border-width: 2px; }
+        .border { border-width: 1px; }
+        button, input { padding: 12px 16px; border: 2px solid #4b5563; border-radius: 8px; background: #000; color: #fff; font-weight: bold; }
+        button:hover { opacity: 0.8; }
+        .fa, .fas { font-family: "Font Awesome 6 Free"; font-weight: 900; }
+        </style>
+        <meta name="theme-color" content="#000000">
+        <link rel="manifest" href="/manifest.json">
+    </head>
+    <body class="bg-black text-white min-h-screen font-bold">
+
+        <div class="container mx-auto p-6">
+            <!-- En-tête DiagPV -->
+            <header class="mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-solar-panel text-4xl text-yellow-400 mr-4"></i>
+                        <div>
+                            <h1 class="text-3xl font-black">DIAGNOSTIC PHOTOVOLTAÏQUE</h1>
+                            <p class="text-lg text-gray-300">Audit Électroluminescence - Interface Terrain Nocturne</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <a href="/dashboard.html" class="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg font-medium transition">
+                            <i class="fas fa-list mr-2"></i>Mes Audits
+                        </a>
+                        <a href="https://diagnostic-hub.pages.dev" target="_blank" class="bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-lg text-sm font-medium transition">
+                            <i class="fas fa-home mr-1"></i>Hub DiagPV
+                        </a>
+                    </div>
+                </div>
+                <p class="text-lg text-blue-400 text-center">
+                    <i class="fas fa-globe mr-2"></i>
+                    www.diagnosticphotovoltaique.fr
+                </p>
+            </header>
+            
+            <!-- Interface création audit -->
+            <div class="max-w-4xl mx-auto">
+                <div class="bg-gray-900 rounded-lg p-8 border-2 border-yellow-400">
+                    <h2 class="text-2xl font-black mb-6 text-center">
+                        <i class="fas fa-plus-circle mr-2 text-green-400"></i>
+                        NOUVEL AUDIT ÉLECTROLUMINESCENCE
+                    </h2>
+                    
+                    <form id="createAuditForm" class="space-y-6">
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-lg font-bold mb-2">Nom du projet :</label>
+                                <input type="text" id="projectName" required 
+                                       class="w-full bg-black border-2 border-gray-600 rounded-lg px-4 py-3 text-lg focus:border-yellow-400 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold mb-2">Client :</label>
+                                <input type="text" id="clientName" required 
+                                       class="w-full bg-black border-2 border-gray-600 rounded-lg px-4 py-3 text-lg focus:border-yellow-400 focus:outline-none">
+                            </div>
+                        </div>
+                        
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-lg font-bold mb-2">Localisation :</label>
+                                <input type="text" id="location" required 
+                                       class="w-full bg-black border-2 border-gray-600 rounded-lg px-4 py-3 text-lg focus:border-yellow-400 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-lg font-bold mb-2">Date :</label>
+                                <input type="date" id="auditDate" required 
+                                       class="w-full bg-black border-2 border-gray-600 rounded-lg px-4 py-3 text-lg focus:border-yellow-400 focus:outline-none">
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-800 rounded-lg p-6 border border-gray-600">
+                            <h3 class="text-xl font-bold mb-4 text-yellow-400">CONFIGURATION OU UPLOAD PLAN</h3>
+                            
+                            <div class="mb-6">
+                                <h4 class="text-lg font-bold mb-3">Option A - Configuration manuelle :</h4>
+                                
+                                <!-- Configuration simple (mode actuel) -->
+                                <div id="simpleConfig" class="grid md:grid-cols-3 gap-4 mb-4">
+                                    <div>
+                                        <label class="block text-sm font-bold mb-2">Nombre de strings :</label>
+                                        <input type="number" id="stringCount" min="1" max="100" 
+                                               class="w-full bg-black border-2 border-gray-600 rounded px-3 py-2 text-lg focus:border-yellow-400 focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-bold mb-2">Modules par string :</label>
+                                        <input type="number" id="modulesPerString" min="1" max="50" 
+                                               class="w-full bg-black border-2 border-gray-600 rounded px-3 py-2 text-lg focus:border-yellow-400 focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-bold mb-2">Total modules :</label>
+                                        <div id="totalModules" class="bg-black border-2 border-gray-600 rounded px-3 py-2 text-lg text-green-400 font-black">0</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Bouton pour configuration avancée -->
+                                <div class="text-center mb-4 space-x-3">
+                                    <button type="button" id="toggleAdvancedConfig" 
+                                            class="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg font-bold text-sm">
+                                        <i class="fas fa-cog mr-2"></i>CONFIGURATION AVANCÉE (Strings différents)
+                                    </button>
+                                    <button type="button" id="loadExampleConfig" 
+                                            class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-bold text-sm">
+                                        <i class="fas fa-magic mr-2"></i>EXEMPLE MPPT (26+9×24)
+                                    </button>
+                                </div>
+                                
+                                <!-- Configuration avancée (masquée par défaut) -->
+                                <div id="advancedConfig" class="hidden bg-gray-700 rounded-lg p-4 border border-orange-400">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <h5 class="text-lg font-bold text-orange-400">Configuration par String/MPPT</h5>
+                                        <button type="button" id="addStringBtn" 
+                                                class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm font-bold">
+                                            <i class="fas fa-plus mr-1"></i>Ajouter String
+                                        </button>
+                                    </div>
+                                    
+                                    <div id="stringsList" class="space-y-2 max-h-60 overflow-y-auto">
+                                        <!-- Strings dynamiques seront ajoutés ici -->
+                                    </div>
+                                    
+                                    <div class="mt-4 p-3 bg-gray-800 rounded border-l-4 border-green-400">
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-sm font-bold">TOTAL CONFIGURATION :</span>
+                                            <span id="advancedTotal" class="text-green-400 font-black text-lg">0 modules</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="border-t border-gray-600 pt-6">
+                                <h4 class="text-lg font-bold mb-3">Option B - Upload plan :</h4>
+                                <div class="flex items-center space-x-4">
+                                    <input type="file" id="planFile" accept=".pdf,.png,.jpg,.jpeg" 
+                                           class="hidden">
+                                    <button type="button" onclick="document.getElementById('planFile').click()" 
+                                            class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold text-lg">
+                                        <i class="fas fa-paperclip mr-2"></i>CHARGER PLAN PDF/IMAGE
+                                    </button>
+                                    <span id="planFileName" class="text-gray-400"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" 
+                                class="w-full bg-green-600 hover:bg-green-700 py-4 rounded-lg font-black text-xl transition-colors">
+                            <i class="fas fa-rocket mr-2"></i>CRÉER L'AUDIT
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Boutons d'accès -->
+                <div class="mt-8 grid md:grid-cols-2 gap-6">
+                    <div class="bg-gray-900 rounded-lg p-6 border border-gray-600">
+                        <h3 class="text-xl font-bold mb-4 flex items-center">
+                            <i class="fas fa-history mr-2 text-blue-400"></i>
+                            MES AUDITS RÉCENTS
+                        </h3>
+                        <div id="recentAudits" class="space-y-2 mb-4">
+                            <p class="text-gray-400">Aucun audit récent trouvé</p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-900 rounded-lg p-6 border border-orange-400">
+                        <h3 class="text-xl font-bold mb-4 text-orange-400 flex items-center">
+                            <i class="fas fa-tachometer-alt mr-2"></i>
+                            TABLEAU DE BORD
+                        </h3>
+                        <p class="text-gray-300 mb-4">Gérez tous vos audits en cours avec mise à jour temps réel</p>
+                        <a href="/dashboard" class="w-full bg-orange-600 hover:bg-orange-700 py-3 rounded-lg font-black text-lg transition-colors flex items-center justify-center">
+                            <i class="fas fa-chart-line mr-2"></i>
+                            ACCÉDER AU DASHBOARD
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+
+        <!-- Script de Synchronisation DiagPV -->
+        <script src="/js/diagpv-sync.js"></script>
+        
+        <!-- Scripts Existants -->
+        <script src="/static/diagpv-app.js"></script>
+        <script src="/static/diagpv-json-importer.js"></script>
+        
+        <!-- Script de Gestion Synchronisation -->
+        <script>
+            // Configuration
+            DiagPVSync.config.debugMode = true;
+            DiagPVSync.config.autoSyncOnComplete = true;
+            
+            // Gestion clic bouton sync
+            async function handleSyncClick() {
+                const btn = document.getElementById('syncBtn');
+                const icon = btn.querySelector('i');
+                const text = btn.querySelector('span');
+                
+                btn.disabled = true;
+                icon.classList.add('fa-spin');
+                text.textContent = 'Synchronisation...';
+                
+                try {
+                    const result = await syncAuditToHub();
+                    console.log('✅ Sync réussie:', result);
+                    alert('✅ Projet synchronisé avec le Hub DiagPV !');
+                } catch (error) {
+                    console.error('❌ Erreur sync:', error);
+                    alert('❌ Erreur synchronisation: ' + error.message);
+                } finally {
+                    btn.disabled = false;
+                    icon.classList.remove('fa-spin');
+                    text.textContent = 'Sync Hub';
+                }
+            }
+            
+            // Ajouter sessionId à l'URL après création audit
+            window.addEventListener('auditCreated', function(event) {
+                const sessionId = event.detail.sessionId;
+                if (sessionId) {
+                    const url = new URL(window.location);
+                    url.searchParams.set('sessionId', sessionId);
+                    window.history.pushState({}, '', url);
+                    console.log('[DiagPV] Session ID ajouté à l'URL:', sessionId);
+                }
+            });
+        </script>
+    </body>
+    </html>
+  

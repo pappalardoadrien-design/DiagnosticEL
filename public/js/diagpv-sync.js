@@ -104,7 +104,7 @@ async function syncAuditToHub(sessionId = null) {
 
 /**
  * Récupère le sessionId depuis l'URL
- * Supporte les formats: /audit/UUID ou ?sessionId=UUID
+ * Supporte les formats: /audit/UUID, ?sessionId=UUID, ?token=UUID
  */
 function getSessionIdFromUrl() {
     // Format 1: /audit/76e6eb36-8b49-4255-99d3-55fc1adfc1c9
@@ -113,14 +113,20 @@ function getSessionIdFromUrl() {
         return pathMatch[1];
     }
     
-    // Format 2: ?sessionId=76e6eb36-8b49-4255-99d3-55fc1adfc1c9
+    // Format 2: ?token=76e6eb36-8b49-4255-99d3-55fc1adfc1c9 (prioritaire)
+    // Format 3: ?sessionId=76e6eb36-8b49-4255-99d3-55fc1adfc1c9
     const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    if (token) {
+        return token;
+    }
+    
     const sessionId = urlParams.get('sessionId');
     if (sessionId) {
         return sessionId;
     }
     
-    // Format 3: Dernier segment de l'URL
+    // Format 4: Dernier segment de l'URL
     const segments = window.location.pathname.split('/').filter(s => s);
     const lastSegment = segments[segments.length - 1];
     if (lastSegment && lastSegment.match(/^[a-f0-9-]+$/i)) {
@@ -134,27 +140,35 @@ function getSessionIdFromUrl() {
  * Charge les données d'audit depuis localStorage
  */
 function loadAuditData(sessionId) {
-    const storageKey = `audit_${sessionId}`;
-    const rawData = localStorage.getItem(storageKey);
+    // Essayer le format principal DiagPV
+    const diagpvKey = `diagpv_audit_${sessionId}`;
+    let rawData = localStorage.getItem(diagpvKey);
     
-    if (!rawData) {
-        // Essayer autres formats de clés
-        const allKeys = Object.keys(localStorage);
-        const matchingKey = allKeys.find(k => 
-            k.includes(sessionId) || 
-            k.includes('audit') || 
-            k.includes('session')
-        );
-        
-        if (matchingKey) {
-            log(`📦 Données trouvées avec clé alternative: ${matchingKey}`);
-            return JSON.parse(localStorage.getItem(matchingKey));
-        }
-        
-        return null;
+    if (rawData) {
+        log(`📦 Données trouvées avec clé DiagPV: ${diagpvKey}`);
+        return JSON.parse(rawData);
     }
     
-    return JSON.parse(rawData);
+    // Essayer format ancien
+    const oldKey = `audit_${sessionId}`;
+    rawData = localStorage.getItem(oldKey);
+    
+    if (rawData) {
+        log(`📦 Données trouvées avec clé ancienne: ${oldKey}`);
+        return JSON.parse(rawData);
+    }
+    
+    // Essayer tous les formats possibles
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key.includes(sessionId)) {
+            log(`📦 Données trouvées avec clé alternative: ${key}`);
+            return JSON.parse(localStorage.getItem(key));
+        }
+    }
+    
+    log(`❌ Aucune donnée trouvée pour session: ${sessionId}`);
+    return null;
 }
 
 /**
