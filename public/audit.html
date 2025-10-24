@@ -1,0 +1,513 @@
+
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+        <title>DiagPV Audit EL - a4e19950</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+        <link href="/static/diagpv-styles.css" rel="stylesheet">
+        <style>
+        /* Styles critiques inline pour éviter l'écran noir - VERSION RENFORCÉE */
+        * { box-sizing: border-box; }
+        html, body { 
+            background: #000000 !important; 
+            color: #ffffff !important; 
+            min-height: 100vh !important;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif !important;
+            font-weight: bold !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.5 !important;
+        }
+        
+        /* Container et layout */
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px !important; }
+        .grid { display: grid !important; }
+        .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
+        .gap-6 { gap: 24px !important; }
+        .flex { display: flex !important; }
+        .items-center { align-items: center !important; }
+        .justify-center { justify-content: center !important; }
+        .space-x-4 > * + * { margin-left: 16px !important; }
+        .mb-4 { margin-bottom: 16px !important; }
+        .mb-6 { margin-bottom: 24px !important; }
+        .mb-8 { margin-bottom: 32px !important; }
+        .p-6 { padding: 24px !important; }
+        .p-4 { padding: 16px !important; }
+        .px-4 { padding-left: 16px !important; padding-right: 16px !important; }
+        .py-3 { padding-top: 12px !important; padding-bottom: 12px !important; }
+        .text-center { text-align: center !important; }
+        
+        /* Couleurs de fond */
+        .bg-black { background-color: #000000 !important; }
+        .bg-gray-900 { background-color: #111827 !important; }
+        .bg-orange-600 { background-color: #ea580c !important; }
+        .bg-green-600 { background-color: #16a34a !important; }
+        .bg-blue-600 { background-color: #2563eb !important; }
+        .bg-purple-600 { background-color: #9333ea !important; }
+        
+        /* Couleurs de texte */
+        .text-white { color: #ffffff !important; }
+        .text-yellow-400 { color: #facc15 !important; }
+        .text-orange-400 { color: #fb923c !important; }
+        .text-green-400 { color: #4ade80 !important; }
+        .text-blue-400 { color: #60a5fa !important; }
+        .text-gray-300 { color: #d1d5db !important; }
+        .text-gray-400 { color: #9ca3af !important; }
+        
+        /* Bordures */
+        .border { border-width: 1px !important; border-style: solid !important; }
+        .border-2 { border-width: 2px !important; border-style: solid !important; }
+        .border-yellow-400 { border-color: #facc15 !important; }
+        .border-orange-400 { border-color: #fb923c !important; }
+        .border-gray-600 { border-color: #4b5563 !important; }
+        .rounded-lg { border-radius: 8px !important; }
+        
+        /* Tailles de police */
+        .text-xl { font-size: 20px !important; }
+        .text-2xl { font-size: 24px !important; }
+        .text-3xl { font-size: 30px !important; }
+        .text-4xl { font-size: 36px !important; }
+        .font-bold { font-weight: bold !important; }
+        .font-black { font-weight: 900 !important; }
+        
+        /* Éléments interactifs */
+        button, input, select, textarea {
+            padding: 12px 16px !important;
+            border: 2px solid #4b5563 !important;
+            border-radius: 8px !important;
+            background: #000000 !important;
+            color: #ffffff !important;
+            font-weight: bold !important;
+            font-family: inherit !important;
+            cursor: pointer !important;
+        }
+        
+        button:hover {
+            opacity: 0.8 !important;
+            transform: translateY(-1px) !important;
+            transition: all 0.2s !important;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none !important;
+            border-color: #facc15 !important;
+            box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.2) !important;
+        }
+        
+        /* Responsive */
+        @media (min-width: 768px) {
+            .md\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+        }
+        
+        /* Icônes FontAwesome */
+        .fa, .fas { font-family: "Font Awesome 6 Free" !important; font-weight: 900 !important; }
+        
+        /* Classes utilitaires supplémentaires */
+        .inline-flex { display: inline-flex !important; }
+        .w-full { width: 100% !important; }
+        .mr-2 { margin-right: 8px !important; }
+        .mr-4 { margin-right: 16px !important; }
+        .hidden { display: none !important; }
+        
+        /* Animation de chargement */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite !important; }
+        
+        /* Styles sélection multiple */
+        .module-btn.multi-select-mode {
+            position: relative !important;
+            transition: all 0.2s ease !important;
+        }
+        .module-btn.multi-select-mode:hover {
+            transform: scale(1.05) !important;
+            box-shadow: 0 0 10px rgba(250, 204, 21, 0.5) !important;
+        }
+        .module-btn.selected-for-bulk {
+            border: 3px solid #facc15 !important;
+            box-shadow: 0 0 15px rgba(250, 204, 21, 0.8) !important;
+            transform: scale(1.02) !important;
+        }
+        .module-btn.selected-for-bulk::after {
+            content: "✓" !important;
+            position: absolute !important;
+            top: -5px !important;
+            right: -5px !important;
+            background: #facc15 !important;
+            color: #000 !important;
+            width: 20px !important;
+            height: 20px !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 12px !important;
+            font-weight: bold !important;
+        }
+        #multiSelectToggleBtn.active {
+            background-color: #facc15 !important;
+            color: #000000 !important;
+            transform: scale(1.05) !important;
+            box-shadow: 0 0 10px rgba(250, 204, 21, 0.6) !important;
+        }
+        .bulk-action-btn:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+        }
+        body { background: #000 !important; color: #fff !important; min-height: 100vh; font-family: system-ui, -apple-system, sans-serif; font-weight: bold; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+        .bg-black { background-color: #000 !important; }
+        .text-white { color: #fff !important; }
+        .text-yellow-400 { color: #facc15 !important; }
+        .text-orange-400 { color: #fb923c !important; }
+        .text-green-400 { color: #4ade80 !important; }
+        .text-blue-400 { color: #60a5fa !important; }
+        .bg-gray-900 { background-color: #111827 !important; }
+        .bg-orange-600 { background-color: #ea580c !important; }
+        .border-yellow-400 { border-color: #facc15 !important; }
+        .border-orange-400 { border-color: #fb923c !important; }
+        .rounded-lg { border-radius: 8px; }
+        .p-6 { padding: 24px; }
+        .mb-4 { margin-bottom: 16px; }
+        .font-bold { font-weight: bold; }
+        .text-2xl { font-size: 24px; }
+        .text-xl { font-size: 20px; }
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .justify-center { justify-content: center; }
+        .space-x-4 > * + * { margin-left: 16px; }
+        .grid { display: grid; }
+        .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+        @media (min-width: 768px) { .md\:grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+        .gap-6 { gap: 24px; }
+        .border-2 { border-width: 2px; }
+        .border { border-width: 1px; }
+        button, input { padding: 12px 16px; border: 2px solid #4b5563; border-radius: 8px; background: #000; color: #fff; font-weight: bold; }
+        button:hover { opacity: 0.8; }
+        .fa, .fas { font-family: "Font Awesome 6 Free"; font-weight: 900; }
+        </style>
+        <meta name="theme-color" content="#000000">
+    </head>
+    <body class="bg-black text-white min-h-screen font-bold overflow-x-auto" data-audit-token="a4e19950-c73c-412c-be4d-699c9de1dde1">
+        <!-- En-tête audit -->
+        <header class="sticky top-0 bg-black border-b-2 border-yellow-400 p-4 z-50">
+            <div class="flex flex-wrap items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-yellow-400 hover:text-yellow-300" title="Retour à l'accueil">
+                        <i class="fas fa-home text-2xl"></i>
+                    </a>
+                    <i class="fas fa-moon text-2xl text-yellow-400"></i>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h1 id="projectTitle" class="text-xl font-black">Chargement...</h1>
+                            <button id="editAuditBtn" class="text-orange-400 hover:text-orange-300 p-1" title="Modifier l'audit">
+                                <i class="fas fa-edit text-lg"></i>
+                            </button>
+                        </div>
+                        <div class="flex items-center space-x-4 text-sm">
+                            <span>Progression: <span id="progress" class="text-green-400 font-black">0/0</span></span>
+                            <span>Techniciens: <span id="technicians" class="text-blue-400">0/4</span></span>
+                            <span id="technicianIcons">👤</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex space-x-2 flex-wrap">
+                    <a href="/dashboard" class="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded font-bold flex items-center border-2 border-orange-400 shadow-lg" title="Accéder au tableau de bord - Vue d'ensemble audits">
+                        <i class="fas fa-tachometer-alt mr-2 text-lg"></i>TABLEAU DE BORD
+                    </a>
+                    <button id="multiSelectToggleBtn" class="bg-yellow-600 hover:bg-yellow-700 px-4 py-2 rounded font-bold border-2 border-yellow-400" title="Activer la sélection multiple pour gagner du temps sur les modules défectueux">
+                        <i class="fas fa-check-square mr-1"></i>SÉLECTION MULTIPLE
+                    </button>
+                    <button id="measureBtn" class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded font-bold">
+                        <i class="fas fa-chart-line mr-1"></i>MESURES
+                    </button>
+                    <button id="reportBtn" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold">
+                        <i class="fas fa-file-pdf mr-1"></i>RAPPORT
+                    </button>
+                    <button id="shareBtn" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded font-bold">
+                        <i class="fas fa-share mr-1"></i>PARTAGE
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Navigation strings -->
+        <nav class="bg-gray-900 p-4 border-b border-gray-600 overflow-x-auto">
+            <div id="stringNavigation" class="flex space-x-2 min-w-max">
+                <!-- Navigation dynamique des strings -->
+            </div>
+        </nav>
+        
+        <!-- Zone principale audit -->
+        <main class="p-4">
+            <!-- Barre d'outils sélection multiple -->
+            <div id="multiSelectToolbar" class="hidden bg-orange-900 border-2 border-orange-400 rounded-lg p-4 mb-4 sticky top-20 z-40">
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center space-x-4">
+                        <button id="exitMultiSelectBtn" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded font-bold text-sm" title="Quitter le mode sélection">
+                            <i class="fas fa-times mr-1"></i>QUITTER
+                        </button>
+                        <button id="selectAllBtn" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-bold text-sm" title="Sélectionner tous les modules visibles">
+                            <i class="fas fa-check-double mr-1"></i>TOUT
+                        </button>
+                        <button id="clearSelectionBtn" class="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded font-bold text-sm" title="Désélectionner tout">
+                            <i class="fas fa-times-circle mr-1"></i>AUCUN
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm">Sélectionnés:</span>
+                        <span id="selectedCount" class="bg-black px-3 py-1 rounded font-black text-yellow-400">0</span>
+                    </div>
+                </div>
+                
+                <!-- Actions de lot -->
+                <div class="mt-4 pt-4 border-t border-orange-400">
+                    <div class="grid grid-cols-2 md:grid-cols-6 gap-2">
+                        <button class="bulk-action-btn bg-green-600 hover:bg-green-700 p-2 rounded font-bold text-sm" data-status="ok" title="Marquer comme OK">
+                            🟢 OK
+                        </button>
+                        <button class="bulk-action-btn bg-yellow-600 hover:bg-yellow-700 p-2 rounded font-bold text-sm" data-status="inequality" title="Marquer comme inégalité">
+                            🟡 Inégalité
+                        </button>
+                        <button class="bulk-action-btn bg-orange-600 hover:bg-orange-700 p-2 rounded font-bold text-sm" data-status="microcracks" title="Marquer comme microfissures">
+                            🟠 Fissures
+                        </button>
+                        <button class="bulk-action-btn bg-red-600 hover:bg-red-700 p-2 rounded font-bold text-sm" data-status="dead" title="Marquer comme HS">
+                            🔴 HS
+                        </button>
+                        <button class="bulk-action-btn bg-blue-600 hover:bg-blue-700 p-2 rounded font-bold text-sm" data-status="string_open" title="Marquer comme string ouvert">
+                            🔵 String
+                        </button>
+                        <button class="bulk-action-btn bg-gray-600 hover:bg-gray-700 p-2 rounded font-bold text-sm" data-status="not_connected" title="Marquer comme non raccordé">
+                            ⚫ Non raccordé
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="auditContent">
+                <!-- Contenu dynamique de l'audit -->
+            </div>
+        </main>
+        
+        <!-- Modal diagnostic module -->
+        <div id="moduleModal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
+            <div class="bg-gray-900 border-2 border-yellow-400 rounded-lg p-6 max-w-md w-full">
+                <h3 id="modalTitle" class="text-xl font-black mb-4 text-center">MODULE M000</h3>
+                
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <button class="module-status-btn bg-green-600 hover:bg-green-700 p-3 rounded font-bold" data-status="ok">
+                        🟢 OK<br><span class="text-sm font-normal">Aucun défaut détecté</span>
+                    </button>
+                    <button class="module-status-btn bg-yellow-600 hover:bg-yellow-700 p-3 rounded font-bold" data-status="inequality">
+                        🟡 Inégalité<br><span class="text-sm font-normal">Qualité cellules</span>
+                    </button>
+                    <button class="module-status-btn bg-orange-600 hover:bg-orange-700 p-3 rounded font-bold" data-status="microcracks">
+                        🟠 Microfissures<br><span class="text-sm font-normal">Visibles EL</span>
+                    </button>
+                    <button class="module-status-btn bg-red-600 hover:bg-red-700 p-3 rounded font-bold" data-status="dead">
+                        🔴 HS<br><span class="text-sm font-normal">Module défaillant</span>
+                    </button>
+                    <button class="module-status-btn bg-blue-600 hover:bg-blue-700 p-3 rounded font-bold" data-status="string_open">
+                        🔵 String ouvert<br><span class="text-sm font-normal">Sous-string ouvert</span>
+                    </button>
+                    <button class="module-status-btn bg-gray-600 hover:bg-gray-700 p-3 rounded font-bold" data-status="not_connected">
+                        ⚫ Non raccordé<br><span class="text-sm font-normal">Non connecté</span>
+                    </button>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-bold mb-2">Commentaire (optionnel) :</label>
+                    <input type="text" id="moduleComment" 
+                           class="w-full bg-black border-2 border-gray-600 rounded px-3 py-2 text-lg focus:border-yellow-400 focus:outline-none"
+                           placeholder="Détails du défaut...">
+                </div>
+                
+                <div class="flex space-x-3">
+                    <button id="validateBtn" class="flex-1 bg-green-600 hover:bg-green-700 py-3 rounded font-black">
+                        VALIDER
+                    </button>
+                    <button id="cancelBtn" class="flex-1 bg-gray-600 hover:bg-gray-700 py-3 rounded font-black">
+                        ANNULER
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal édition audit -->
+        <div id="editAuditModal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
+            <div class="bg-gray-900 border-2 border-orange-400 rounded-lg p-6 max-w-lg w-full">
+                <h3 class="text-xl font-black mb-4 text-center text-orange-400">
+                    <i class="fas fa-edit mr-2"></i>MODIFIER L'AUDIT
+                </h3>
+                
+                <form id="editAuditForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold mb-2">Nom du projet :</label>
+                        <input type="text" id="editProjectName" required 
+                               class="w-full bg-black border-2 border-gray-600 rounded px-3 py-2 text-lg focus:border-orange-400 focus:outline-none">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-bold mb-2">Client :</label>
+                        <input type="text" id="editClientName" required 
+                               class="w-full bg-black border-2 border-gray-600 rounded px-3 py-2 text-lg focus:border-orange-400 focus:outline-none">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-bold mb-2">Localisation :</label>
+                        <input type="text" id="editLocation" required 
+                               class="w-full bg-black border-2 border-gray-600 rounded px-3 py-2 text-lg focus:border-orange-400 focus:outline-none">
+                    </div>
+                    
+                    <div class="flex space-x-3 pt-4">
+                        <button type="submit" class="flex-1 bg-orange-600 hover:bg-orange-700 py-3 rounded font-black">
+                            <i class="fas fa-save mr-2"></i>SAUVEGARDER
+                        </button>
+                        <button type="button" id="cancelEditBtn" class="flex-1 bg-gray-600 hover:bg-gray-700 py-3 rounded font-black">
+                            ANNULER
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Modal confirmation sélection multiple -->
+        <div id="bulkActionModal" class="hidden fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4">
+            <div class="bg-gray-900 border-2 border-yellow-400 rounded-lg p-6 max-w-lg w-full">
+                <h3 class="text-xl font-black mb-4 text-center text-yellow-400">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>CONFIRMATION SÉLECTION MULTIPLE
+                </h3>
+                
+                <div class="bg-gray-800 border border-orange-400 rounded p-4 mb-4">
+                    <p class="text-center mb-2">Vous allez modifier <span id="bulkCount" class="text-yellow-400 font-black">0</span> modules :</p>
+                    <div id="bulkModulesList" class="text-sm text-gray-300 max-h-32 overflow-y-auto">
+                        <!-- Liste des modules sélectionnés -->
+                    </div>
+                </div>
+                
+                <div class="bg-gray-800 border border-green-400 rounded p-4 mb-4">
+                    <p class="text-center">
+                        Nouveau statut : <span id="bulkNewStatus" class="font-black text-green-400">OK</span>
+                    </p>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-bold mb-2">Commentaire pour tous (optionnel) :</label>
+                    <input type="text" id="bulkComment" 
+                           class="w-full bg-black border-2 border-gray-600 rounded px-3 py-2 text-lg focus:border-yellow-400 focus:outline-none"
+                           placeholder="Ex: Modules cassés lors passage EL...">
+                </div>
+                
+                <div class="flex space-x-3">
+                    <button id="confirmBulkBtn" class="flex-1 bg-green-600 hover:bg-green-700 py-3 rounded font-black">
+                        <i class="fas fa-check mr-2"></i>CONFIRMER
+                    </button>
+                    <button id="cancelBulkBtn" class="flex-1 bg-gray-600 hover:bg-gray-700 py-3 rounded font-black">
+                        ANNULER
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Scripts Audit -->
+        <script src="/static/diagpv-audit.js"></script>
+        <script src="/static/diagpv-measures.js"></script>
+        
+        <!-- Script de Synchronisation DiagPV -->
+        <script src="/js/diagpv-sync.js"></script>
+        
+        <!-- Script Integration Sync -->
+        <script>
+            // Configuration
+            DiagPVSync.config.debugMode = true;
+            DiagPVSync.config.autoSyncOnComplete = true;
+            
+            // Ajouter bouton Sync Hub dans le header (après chargement DOM)
+            window.addEventListener('load', function() {
+                const header = document.querySelector('header') || document.querySelector('.container');
+                if (header) {
+                    // Créer container boutons si pas existant
+                    let btnContainer = header.querySelector('.sync-buttons');
+                    if (!btnContainer) {
+                        btnContainer = document.createElement('div');
+                        btnContainer.className = 'sync-buttons flex items-center space-x-3 mt-4';
+                        header.appendChild(btnContainer);
+                    }
+                    
+                    // Bouton Sync Hub
+                    const syncBtn = document.createElement('button');
+                    syncBtn.id = 'syncHubBtn';
+                    syncBtn.className = 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 shadow-lg hover:shadow-xl';
+                    syncBtn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Sync Hub';
+                    syncBtn.onclick = handleSyncClick;
+                    
+                    // Bouton Dashboard
+                    const dashBtn = document.createElement('a');
+                    dashBtn.href = '/dashboard.html';
+                    dashBtn.className = 'bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg font-bold transition';
+                    dashBtn.innerHTML = '<i class="fas fa-list mr-2"></i>Mes Audits';
+                    
+                    // Bouton Hub
+                    const hubBtn = document.createElement('a');
+                    hubBtn.href = 'https://diagnostic-hub.pages.dev';
+                    hubBtn.target = '_blank';
+                    hubBtn.className = 'bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg font-bold transition';
+                    hubBtn.innerHTML = '<i class="fas fa-home mr-2"></i>Hub DiagPV';
+                    
+                    btnContainer.appendChild(syncBtn);
+                    btnContainer.appendChild(dashBtn);
+                    btnContainer.appendChild(hubBtn);
+                }
+                
+                // Auto-sync si hash #sync dans URL
+                if (window.location.hash === '#sync') {
+                    setTimeout(() => handleSyncClick(), 1000);
+                }
+            });
+            
+            // Gestion clic bouton sync
+            async function handleSyncClick() {
+                const btn = document.getElementById('syncHubBtn');
+                if (!btn) return;
+                
+                const icon = btn.querySelector('i');
+                const originalHTML = btn.innerHTML;
+                
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Synchronisation...';
+                
+                try {
+                    const result = await syncAuditToHub();
+                    console.log('✅ Sync réussie:', result);
+                    
+                    // Animation succès
+                    btn.innerHTML = '<i class="fas fa-check mr-2"></i>Synchronisé !';
+                    btn.className = 'bg-green-600 px-4 py-2 rounded-lg font-bold';
+                    
+                    // Notification
+                    alert('✅ Projet synchronisé avec le Hub DiagPV !\n\nProjet ID: ' + result.projectId);
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalHTML;
+                        btn.className = 'bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-4 py-2 rounded-lg font-bold transition-all duration-300 shadow-lg hover:shadow-xl';
+                        btn.disabled = false;
+                    }, 3000);
+                } catch (error) {
+                    console.error('❌ Erreur sync:', error);
+                    alert('❌ Erreur synchronisation: ' + error.message);
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                }
+            }
+        </script>
+    </body>
+    </html>
+  
