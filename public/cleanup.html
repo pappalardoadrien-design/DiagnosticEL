@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>DiagPV - Nettoyage & Migration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-black text-white p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">🧹 Nettoyage & Migration Audits</h1>
+        
+        <div class="bg-gray-900 border-2 border-yellow-400 rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4">📊 Audits Actuels</h2>
+            <div id="auditsList"></div>
+        </div>
+
+        <div class="space-y-4">
+            <button onclick="cleanCorruptedAudits()" class="bg-red-600 hover:bg-red-700 px-6 py-3 rounded-lg font-bold w-full">
+                🗑️ Nettoyer Audits Corrompus
+            </button>
+            
+            <button onclick="migrateFromOldDomain()" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold w-full">
+                📦 Migrer depuis Ancien Domaine
+            </button>
+
+            <button onclick="window.location.href='/'" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold w-full">
+                ✅ Retour Accueil
+            </button>
+        </div>
+
+        <div id="logs" class="mt-6 bg-gray-800 rounded-lg p-4 font-mono text-sm max-h-96 overflow-y-auto"></div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            logsDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function listAudits() {
+            const auditsList = document.getElementById('auditsList');
+            const audits = [];
+
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith('diagpv_audit_')) {
+                    try {
+                        const audit = JSON.parse(localStorage.getItem(key));
+                        audits.push({
+                            key,
+                            token: audit.auditToken,
+                            name: audit.auditData ? audit.auditData.project_name : '❌ CORROMPU',
+                            modules: audit.modules ? audit.modules.length : 0,
+                            corrupted: !audit.auditData
+                        });
+                    } catch (e) {
+                        audits.push({ key, corrupted: true, name: '❌ ERREUR PARSING' });
+                    }
+                }
+            }
+
+            auditsList.innerHTML = audits.map(a => `
+                <div class="flex items-center justify-between p-3 mb-2 ${a.corrupted ? 'bg-red-900' : 'bg-gray-800'} rounded">
+                    <div>
+                        <strong>${a.name || 'Sans nom'}</strong>
+                        <span class="text-gray-400 text-sm ml-2">(${a.modules} modules)</span>
+                    </div>
+                    <span class="${a.corrupted ? 'text-red-400' : 'text-green-400'} text-sm">
+                        ${a.corrupted ? '❌ Corrompu' : '✅ OK'}
+                    </span>
+                </div>
+            `).join('');
+
+            log(`📊 ${audits.length} audit(s) trouvé(s), ${audits.filter(a => a.corrupted).length} corrompu(s)`);
+        }
+
+        function cleanCorruptedAudits() {
+            log('🧹 Démarrage nettoyage...');
+            let cleaned = 0;
+
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('diagpv_audit_')) {
+                    try {
+                        const audit = JSON.parse(localStorage.getItem(key));
+                        if (!audit.auditData || audit.auditData === null) {
+                            localStorage.removeItem(key);
+                            log(`🗑️ Supprimé: ${key}`);
+                            cleaned++;
+                        }
+                    } catch (e) {
+                        localStorage.removeItem(key);
+                        log(`🗑️ Supprimé (erreur parsing): ${key}`);
+                        cleaned++;
+                    }
+                }
+            }
+
+            log(`✅ ${cleaned} audit(s) corrompu(s) supprimé(s)`);
+            listAudits();
+        }
+
+        function migrateFromOldDomain() {
+            log('📦 Migration depuis ancien domaine...');
+            log('⚠️ Cette fonctionnalité nécessite une interaction manuelle');
+            log('Instructions:');
+            log('1. Ouvre https://5643d3fa.diagpv-audit.pages.dev/cleanup.html');
+            log('2. Exporte les données JALIBAT');
+            log('3. Importe-les ici');
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            log('✅ Outil de nettoyage chargé');
+            listAudits();
+        });
+    </script>
+</body>
+</html>
