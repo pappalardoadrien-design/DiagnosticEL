@@ -36,21 +36,44 @@ class DiagPVAudit {
     }
 
     async loadAuditData() {
-        const response = await fetch(`/api/audit/${this.auditToken}`)
+        // Charger depuis localStorage au lieu de l'API
+        const localData = localStorage.getItem(`diagpv_audit_${this.auditToken}`)
         
-        if (!response.ok) {
-            throw new Error('Audit introuvable')
+        if (!localData) {
+            throw new Error('Audit introuvable dans localStorage')
         }
 
-        const data = await response.json()
-        this.auditData = data.audit
+        const data = JSON.parse(localData)
+        this.auditData = data.auditData
         
-        // Construction Map modules pour accès rapide
-        data.modules.forEach(module => {
-            this.modules.set(module.module_id, module)
-        })
+        // Charger les modules depuis l'objet audit
+        if (data.modules && Array.isArray(data.modules)) {
+            data.modules.forEach((module, index) => {
+                // Assurer que chaque module a un ID
+                if (!module.id) {
+                    module.id = index + 1
+                }
+                this.modules.set(module.id, module)
+            })
+        }
 
         console.log('✅ Audit chargé:', this.auditData.project_name, 'Modules:', this.modules.size)
+    }
+
+    // Sauvegarder l'audit dans localStorage
+    saveAuditToLocalStorage() {
+        try {
+            const auditData = {
+                auditToken: this.auditToken,
+                auditData: this.auditData,
+                modules: Array.from(this.modules.values()),
+                lastSync: Date.now()
+            }
+            localStorage.setItem(`diagpv_audit_${this.auditToken}`, JSON.stringify(auditData))
+            console.log('💾 Audit sauvegardé dans localStorage')
+        } catch (error) {
+            console.error('❌ Erreur sauvegarde localStorage:', error)
+        }
     }
 
     setupInterface() {
@@ -340,17 +363,8 @@ class DiagPVAudit {
                 technicianId: this.technicianId
             }
 
-            const response = await fetch(`/api/audit/${this.auditToken}/module/${moduleId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(updateData)
-            })
-
-            if (!response.ok) {
-                throw new Error('Erreur mise à jour module')
-            }
+            // Sauvegarde directe dans localStorage (pas d'API)
+            // const response = await fetch(...) - SUPPRIMÉ
 
             // Mise à jour locale immédiate
             selectedModule.status = selectedStatus
@@ -366,8 +380,8 @@ class DiagPVAudit {
             this.updateProgress()
             this.renderStringNavigation()
 
-            // Sauvegarde offline
-            this.saveOfflineData()
+            // Sauvegarde dans localStorage
+            this.saveAuditToLocalStorage()
 
             this.closeModal()
             this.showAlert(`Module ${moduleId} mis à jour`, 'success')
@@ -541,22 +555,11 @@ class DiagPVAudit {
     }
 
     async syncOfflineQueue() {
+        // Plus besoin de sync API - tout est dans localStorage
         if (this.offlineQueue.length === 0) return
 
-        console.log('🔄 Sync offline queue:', this.offlineQueue.length, 'items')
-        
-        for (const update of this.offlineQueue) {
-            try {
-                await fetch(`/api/audit/${this.auditToken}/module/${update.moduleId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(update)
-                })
-            } catch (error) {
-                console.error('Erreur sync offline:', error)
-                break
-            }
-        }
+        console.log('💾 Sauvegarde locale (plus besoin de sync API)')
+        this.saveAuditToLocalStorage()
 
         this.offlineQueue = []
         this.showAlert('Données synchronisées avec succès', 'success')
@@ -976,24 +979,15 @@ class DiagPVAudit {
     // Sauvegarde modifications audit
     async saveAuditChanges(formData) {
         try {
-            const response = await fetch(`/api/audit/${this.auditToken}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(formData)
-            })
-
-            if (!response.ok) {
-                throw new Error('Erreur sauvegarde audit')
-            }
-
-            const result = await response.json()
+            // Sauvegarde directe localStorage (pas d'API)
             
             // Mise à jour données locales
             this.auditData.project_name = formData.project_name
             this.auditData.client_name = formData.client_name
             this.auditData.location = formData.location
+            
+            // Sauvegarde dans localStorage
+            this.saveAuditToLocalStorage()
             
             // Mise à jour affichage titre
             document.getElementById('projectTitle').textContent = formData.project_name
@@ -1217,48 +1211,31 @@ class DiagPVAudit {
                 comment: comment
             })
 
-            // Appel API pour mise à jour en lot
-            const response = await fetch(`/api/audit/${this.auditToken}/bulk-update`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    modules: modulesToUpdate,
-                    status: this.bulkActionStatus,
-                    comment: comment,
-                    technician_id: this.technicianId
-                })
-            })
+            // Sauvegarde directe localStorage (pas d'API)
+            console.log('💾 Mise à jour locale bulk-update:', modulesToUpdate.length, 'modules')
 
-            if (!response.ok) {
-                throw new Error('Erreur lors de la mise à jour')
-            }
-
-            const result = await response.json()
-            console.log('✅ Réponse API bulk-update:', result)
-
-            // Vérification si des modules ont été effectivement mis à jour
-            if (result.success && result.updated > 0) {
-                // Mise à jour locale des modules
-                modulesToUpdate.forEach(moduleId => {
-                    const module = this.modules.get(moduleId)
-                    if (module) {
-                        module.status = this.bulkActionStatus
-                        if (comment) {
-                            module.comment = comment
-                        }
-                        module.updated_at = new Date().toISOString()
-                        module.technician_id = this.technicianId
+            // Mise à jour locale des modules
+            modulesToUpdate.forEach(moduleId => {
+                const module = this.modules.get(moduleId)
+                if (module) {
+                    module.status = this.bulkActionStatus
+                    if (comment) {
+                        module.comment = comment
                     }
-                })
+                    module.updated_at = new Date().toISOString()
+                    module.technician_id = this.technicianId
+                }
+            })
+            
+            // Sauvegarde dans localStorage
+            this.saveAuditToLocalStorage()
 
-                // Re-rendu interface
-                this.renderModulesGrid()
-                this.updateProgress()
+            // Re-rendu interface
+            this.renderModulesGrid()
+            this.updateProgress()
 
-                // Sortie mode sélection après succès
-                this.exitMultiSelectMode()
+            // Sortie mode sélection après succès
+            this.exitMultiSelectMode()
                 this.closeBulkModal()
 
                 this.showAlert(`✅ ${result.updated} modules mis à jour avec succès !`, 'success')
@@ -1314,6 +1291,7 @@ class DiagPVAudit {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🌙 DiagPV Audit Terrain - Interface Nocturne Initialisée')
     window.diagpvAudit = new DiagPVAudit()
+    window.app = window.diagpvAudit // Alias pour compatibilité
 })
 
 // Sauvegarde avant fermeture page
