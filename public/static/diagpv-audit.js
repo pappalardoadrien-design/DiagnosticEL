@@ -646,16 +646,219 @@ class DiagPVAudit {
         try {
             this.showAlert('Génération rapport en cours...', 'info')
             
-            // Ouverture rapport dans nouvel onglet
-            const reportUrl = `/api/audit/${this.auditToken}/report`
-            window.open(reportUrl, '_blank')
+            // Générer rapport HTML côté client
+            const reportHTML = this.generateReportHTML()
             
-            console.log('📄 Rapport généré:', reportUrl)
+            // Ouvrir dans nouvel onglet
+            const reportWindow = window.open('', '_blank')
+            reportWindow.document.write(reportHTML)
+            reportWindow.document.close()
+            
+            console.log('📄 Rapport généré avec succès')
+            this.showAlert('✅ Rapport généré !', 'success')
             
         } catch (error) {
             console.error('Erreur génération rapport:', error)
-            this.showAlert('Erreur génération rapport', 'error')
+            this.showAlert('❌ Erreur génération rapport: ' + error.message, 'error')
         }
+    }
+
+    generateReportHTML() {
+        // Calculer statistiques
+        const totalModules = this.modules.length
+        const okModules = this.modules.filter(m => m.status === 'ok').length
+        const defectModules = this.modules.filter(m => m.status !== 'ok' && m.status !== 'pending').length
+        const conformityRate = totalModules > 0 ? ((okModules / totalModules) * 100).toFixed(1) : 0
+        
+        // Grouper défauts par type
+        const defectsByType = {}
+        this.modules.forEach(module => {
+            if (module.defects && module.defects.length > 0) {
+                module.defects.forEach(defect => {
+                    defectsByType[defect] = (defectsByType[defect] || 0) + 1
+                })
+            }
+        })
+
+        // HTML du rapport
+        return `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapport Audit EL - ${this.auditData.project_name}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; padding: 40px; background: #fff; color: #000; }
+        .header { text-align: center; border-bottom: 3px solid #ea580c; padding-bottom: 20px; margin-bottom: 30px; }
+        .header h1 { color: #ea580c; font-size: 28px; margin-bottom: 10px; }
+        .section { margin-bottom: 30px; page-break-inside: avoid; }
+        .section h2 { color: #ea580c; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #fbbf24; padding-bottom: 5px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .info-item { padding: 10px; background: #f3f4f6; border-left: 4px solid #ea580c; }
+        .info-item strong { display: block; color: #6b7280; font-size: 12px; margin-bottom: 5px; }
+        .info-item span { font-size: 16px; font-weight: bold; }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 20px 0; }
+        .stat-card { text-align: center; padding: 20px; background: #f3f4f6; border-radius: 8px; }
+        .stat-card .number { font-size: 36px; font-weight: bold; margin: 10px 0; }
+        .stat-card .label { color: #6b7280; font-size: 14px; }
+        .stat-card.ok .number { color: #16a34a; }
+        .stat-card.defect .number { color: #dc2626; }
+        .stat-card.conformity .number { color: #2563eb; }
+        .defects-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .defects-table th { background: #ea580c; color: white; padding: 12px; text-align: left; }
+        .defects-table td { padding: 10px; border-bottom: 1px solid #e5e7eb; }
+        .defects-table tr:nth-child(even) { background: #f9fafb; }
+        .footer { margin-top: 50px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center; color: #6b7280; font-size: 12px; }
+        @media print {
+            body { padding: 20px; }
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>📄 RAPPORT D'AUDIT ÉLECTROLUMINESCENCE</h1>
+        <p style="color: #6b7280; margin-top: 10px;">Diagnostic Photovoltaïque - www.diagnosticphotovoltaique.fr</p>
+    </div>
+
+    <!-- Boutons Actions -->
+    <div class="no-print" style="text-align: center; margin-bottom: 30px;">
+        <button onclick="window.print()" style="background: #ea580c; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; margin-right: 10px;">
+            🖨️ Imprimer / PDF
+        </button>
+        <button onclick="window.close()" style="background: #6b7280; color: white; padding: 12px 24px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+            ✖️ Fermer
+        </button>
+    </div>
+
+    <!-- Informations Projet -->
+    <div class="section">
+        <h2>📋 INFORMATIONS PROJET</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <strong>NOM DU PROJET</strong>
+                <span>${this.auditData.project_name || 'N/A'}</span>
+            </div>
+            <div class="info-item">
+                <strong>CLIENT</strong>
+                <span>${this.auditData.client_name || 'N/A'}</span>
+            </div>
+            <div class="info-item">
+                <strong>LOCALISATION</strong>
+                <span>${this.auditData.location || 'N/A'}</span>
+            </div>
+            <div class="info-item">
+                <strong>DATE AUDIT</strong>
+                <span>${new Date(this.auditData.created_at).toLocaleDateString('fr-FR')}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="section">
+        <h2>📊 RÉSULTATS AUDIT</h2>
+        <div class="stats">
+            <div class="stat-card">
+                <div class="label">TOTAL MODULES</div>
+                <div class="number">${totalModules}</div>
+            </div>
+            <div class="stat-card ok">
+                <div class="label">MODULES OK</div>
+                <div class="number">${okModules}</div>
+            </div>
+            <div class="stat-card defect">
+                <div class="label">DÉFAUTS</div>
+                <div class="number">${defectModules}</div>
+            </div>
+        </div>
+        <div class="stats" style="grid-template-columns: 1fr;">
+            <div class="stat-card conformity">
+                <div class="label">TAUX DE CONFORMITÉ</div>
+                <div class="number">${conformityRate}%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Défauts par Type -->
+    ${Object.keys(defectsByType).length > 0 ? `
+    <div class="section">
+        <h2>⚠️ DÉFAUTS DÉTECTÉS PAR TYPE</h2>
+        <table class="defects-table">
+            <thead>
+                <tr>
+                    <th>Type de Défaut</th>
+                    <th>Nombre de Modules Affectés</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${Object.entries(defectsByType).map(([type, count]) => `
+                    <tr>
+                        <td>${this.getStatusLabel(type)}</td>
+                        <td><strong>${count}</strong></td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </div>
+    ` : ''}
+
+    <!-- Liste Modules avec Défauts -->
+    ${defectModules > 0 ? `
+    <div class="section">
+        <h2>🔍 MODULES AVEC DÉFAUTS (Détail)</h2>
+        <table class="defects-table">
+            <thead>
+                <tr>
+                    <th>Module #</th>
+                    <th>Statut</th>
+                    <th>Défauts</th>
+                    <th>Commentaire</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${this.modules.filter(m => m.status !== 'ok' && m.status !== 'pending').map(module => `
+                    <tr>
+                        <td><strong>${module.id}</strong></td>
+                        <td>${this.getStatusLabel(module.status)}</td>
+                        <td>${module.defects ? module.defects.map(d => this.getStatusLabel(d)).join(', ') : '-'}</td>
+                        <td>${module.comment || '-'}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </div>
+    ` : ''}
+
+    <!-- Recommandations -->
+    <div class="section">
+        <h2>💡 RECOMMANDATIONS</h2>
+        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin-top: 10px;">
+            ${conformityRate >= 95 ? `
+                <p><strong>✅ Installation en bon état</strong></p>
+                <p>Le taux de conformité de ${conformityRate}% indique une installation en excellent état. Poursuivre la maintenance préventive.</p>
+            ` : conformityRate >= 85 ? `
+                <p><strong>⚠️ Surveillance recommandée</strong></p>
+                <p>Le taux de conformité de ${conformityRate}% nécessite une surveillance accrue des modules détectés avec défauts.</p>
+            ` : `
+                <p><strong>🔴 Intervention recommandée</strong></p>
+                <p>Le taux de conformité de ${conformityRate}% est inférieur aux standards. Une intervention rapide est recommandée pour les ${defectModules} modules affectés.</p>
+            `}
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p><strong>DiagPV - Diagnostic Photovoltaïque Professionnel</strong></p>
+        <p>Audit conforme IEC 62446-1 | www.diagnosticphotovoltaique.fr</p>
+        <p>Rapport généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
+        <p style="margin-top: 10px; font-size: 10px;">Token audit: ${this.auditToken}</p>
+    </div>
+</body>
+</html>
+        `
     }
 
     shareAudit() {
