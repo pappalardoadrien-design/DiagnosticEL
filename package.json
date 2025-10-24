@@ -1,0 +1,12 @@
+{
+  "name": "diagpv-audit-complete",
+  "version": "2.0.0",
+  "description": "Module Électroluminescence DiagPV avec interface complète et synchronisation Hub",
+  "scripts": {
+    "dev": "npx serve public -p 3001",
+    "deploy": "npx wrangler pages deploy public --project-name diagpv-audit"
+  },
+  "keywords": ["diagpv", "audit", "electroluminescence", "photovoltaique"],
+  "author": "DiagPV",
+  "license": "ISC"
+}
