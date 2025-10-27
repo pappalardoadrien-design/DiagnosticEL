@@ -136,7 +136,8 @@ class DiagPVAudit {
                     status: m.status,
                     comment: m.comment,
                     defects: m.defects || [],
-                    photoEL: m.photo_el || null,
+                    // Photos stockées localement uniquement (localStorage/IndexedDB)
+                    // Pas de sync cloud (trop lourd)
                     technicianId: this.technicianId,
                     technicianName: this.technicianName
                 }))

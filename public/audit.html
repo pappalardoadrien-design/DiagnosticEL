@@ -464,7 +464,7 @@
         </script>
         
         <!-- Script de Synchronisation DiagPV -->
-        <script src="/js/diagpv-sync.js"></script>
+        <script src="/static/diagpv-sync.js"></script>
         
         <!-- Script Integration Sync -->
         <script>
@@ -491,9 +491,9 @@
                     syncBtn.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Sync Hub';
                     syncBtn.onclick = handleSyncClick;
                     
-                    // Bouton Dashboard
+                    // Bouton Mes Audits (retour accueil)
                     const dashBtn = document.createElement('a');
-                    dashBtn.href = '/dashboard.html';
+                    dashBtn.href = '/index.html';
                     dashBtn.className = 'bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg font-bold transition';
                     dashBtn.innerHTML = '<i class="fas fa-list mr-2"></i>Mes Audits';
                     
