@@ -8,6 +8,7 @@ class DiagPVAudit {
         this.modules = new Map()
         this.currentStringFilter = 'all'
         this.technicianId = this.generateTechnicianId()
+        this.technicianName = this.getTechnicianName()
         this.eventSource = null
         this.selectedModule = null
         this.offlineQueue = []
@@ -16,6 +17,16 @@ class DiagPVAudit {
         this.multiSelectMode = false
         this.selectedModules = new Set()
         this.bulkActionStatus = null
+        
+        // Propriétés collaboration temps réel v3.3
+        this.realtimeEnabled = true
+        this.hubApiUrl = 'https://diagnostic-hub.pages.dev'
+        this.lastRemoteSync = Date.now()
+        this.syncInterval = null
+        this.heartbeatInterval = null
+        this.activeTechnicians = []
+        this.isUpdating = false
+        this.isSyncing = false
         
         this.init()
     }
@@ -363,9 +374,6 @@ class DiagPVAudit {
                 technicianId: this.technicianId
             }
 
-            // Sauvegarde directe dans localStorage (pas d'API)
-            // const response = await fetch(...) - SUPPRIMÉ
-
             // Mise à jour locale immédiate
             selectedModule.status = selectedStatus
             selectedModule.comment = comment || null
@@ -382,6 +390,28 @@ class DiagPVAudit {
 
             // Sauvegarde dans localStorage
             this.saveAuditToLocalStorage()
+
+            // Envoi serveur si online et temps réel activé (v3.3)
+            if (navigator.onLine && this.realtimeEnabled) {
+                this.isSyncing = true
+                try {
+                    await fetch(`${this.hubApiUrl}/api/audit/${this.auditToken}/module/${moduleId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            status: selectedStatus,
+                            comment: comment || null,
+                            technicianId: this.technicianId,
+                            technicianName: this.technicianName
+                        })
+                    })
+                    console.log('🌐 Module synced to server:', moduleId)
+                } catch (error) {
+                    console.warn('⚠️ Sync serveur échoué, continuera offline:', error.message)
+                } finally {
+                    this.isSyncing = false
+                }
+            }
 
             this.closeModal()
             this.showAlert(`Module ${moduleId} mis à jour`, 'success')
@@ -465,50 +495,172 @@ class DiagPVAudit {
     }
 
     setupRealtimeSync() {
-        // Server-Sent Events pour collaboration temps réel
-        if (typeof EventSource !== 'undefined') {
-            this.eventSource = new EventSource(`/api/audit/${this.auditToken}/stream`)
+        if (!this.realtimeEnabled) {
+            console.log('⚠️ Collaboration temps réel désactivée')
+            return
+        }
+        
+        console.log('🔄 Configuration collaboration temps réel...')
+        
+        // Polling mises à jour toutes les 3 secondes
+        this.syncInterval = setInterval(() => {
+            this.fetchRemoteUpdates()
+        }, 3000)
+        
+        // Heartbeat toutes les 10 secondes
+        this.heartbeatInterval = setInterval(() => {
+            this.sendHeartbeat()
+        }, 10000)
+        
+        // Envoyer heartbeat initial
+        this.sendHeartbeat()
+        
+        // Charger liste techniciens actifs
+        this.fetchActiveTechnicians()
+        
+        // Rafraîchir liste techniciens toutes les 15 secondes
+        setInterval(() => {
+            this.fetchActiveTechnicians()
+        }, 15000)
+        
+        // Cleanup avant fermeture page
+        window.addEventListener('beforeunload', () => {
+            if (this.syncInterval) clearInterval(this.syncInterval)
+            if (this.heartbeatInterval) clearInterval(this.heartbeatInterval)
+        })
+        
+        console.log('✅ Collaboration temps réel activée')
+    }
+    
+    async fetchRemoteUpdates() {
+        if (!navigator.onLine || this.isUpdating || this.isSyncing) return
+        
+        try {
+            const response = await fetch(
+                `${this.hubApiUrl}/api/audit/${this.auditToken}/updates?since=${this.lastRemoteSync}`,
+                { method: 'GET' }
+            )
             
-            this.eventSource.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data)
-                    if (data.type !== 'ping') {
-                        this.handleRealtimeUpdate(data)
-                    }
-                } catch (error) {
-                    console.error('Erreur parsing SSE:', error)
-                }
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`)
             }
-
-            this.eventSource.onerror = () => {
-                console.log('⚠️ Connexion temps réel interrompue')
-                // Reconnexion automatique après 5s
-                setTimeout(() => this.setupRealtimeSync(), 5000)
+            
+            const result = await response.json()
+            
+            if (result.success && result.updates && result.updates.length > 0) {
+                console.log(`🔄 ${result.updates.length} mise(s) à jour reçue(s)`)
+                
+                result.updates.forEach(update => {
+                    if (update.technician_id !== this.technicianId) {
+                        this.applyRemoteUpdate(update)
+                    }
+                })
+            }
+            
+            this.lastRemoteSync = Date.now()
+        } catch (error) {
+            // Silent fail si offline ou erreur réseau
+            if (navigator.onLine) {
+                console.warn('⚠️ Erreur sync temps réel:', error.message)
             }
         }
-
-        // Simulation indicateur techniciens connectés
-        this.updateTechniciansIndicator()
     }
-
-    handleRealtimeUpdate(data) {
-        if (data.moduleId && data.status && data.technicianId !== this.technicianId) {
-            // Mise à jour module par autre technicien
-            const module = this.modules.get(data.moduleId)
-            if (module) {
-                module.status = data.status
-                this.updateModuleButton(data.moduleId)
-                
-                this.showAlert(`${data.moduleId} mis à jour par autre technicien`, 'info')
+    
+    applyRemoteUpdate(update) {
+        const module = this.modules.get(update.module_id)
+        if (!module) {
+            console.warn('Module non trouvé:', update.module_id)
+            return
+        }
+        
+        // Vérifier si local plus récent (gestion conflits)
+        if (module.updated_at) {
+            const localTime = new Date(module.updated_at).getTime()
+            const remoteTime = update.updated_at_ms || new Date(update.updated_at).getTime()
+            
+            if (localTime > remoteTime) {
+                console.log('📌 Local plus récent, skip remote update:', update.module_id)
+                return
             }
+        }
+        
+        // Appliquer mise à jour remote
+        const oldStatus = module.status
+        module.status = update.status
+        module.comment = update.comment || null
+        module.updated_at = update.updated_at
+        module.technician_id = update.technician_id
+        
+        // Mise à jour UI
+        this.updateModuleButton(update.module_id)
+        this.updateProgress()
+        
+        // Notification visuelle si changement de statut
+        if (oldStatus !== update.status) {
+            const techName = update.technician_name || 'Technicien'
+            this.showAlert(
+                `Module ${update.module_id} → ${this.getStatusLabel(update.status)} (${techName})`, 
+                'info'
+            )
+        }
+        
+        // Sauvegarder en local
+        this.saveAuditToLocalStorage()
+    }
+    
+    async sendHeartbeat() {
+        if (!navigator.onLine || !this.realtimeEnabled) return
+        
+        try {
+            await fetch(`${this.hubApiUrl}/api/audit/${this.auditToken}/heartbeat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    technicianId: this.technicianId,
+                    technicianName: this.technicianName
+                })
+            })
+        } catch (error) {
+            // Silent fail
+        }
+    }
+    
+    async fetchActiveTechnicians() {
+        if (!navigator.onLine || !this.realtimeEnabled) return
+        
+        try {
+            const response = await fetch(
+                `${this.hubApiUrl}/api/audit/${this.auditToken}/technicians`
+            )
+            
+            if (response.ok) {
+                const result = await response.json()
+                if (result.success) {
+                    this.activeTechnicians = result.technicians || []
+                    this.updateTechniciansIndicator()
+                }
+            }
+        } catch (error) {
+            // Silent fail
         }
     }
 
     updateTechniciansIndicator() {
-        // Simulation 2-3 techniciens connectés
-        const count = 2 + Math.floor(Math.random() * 2)
-        document.getElementById('technicians').textContent = `${count}/4`
-        document.getElementById('technicianIcons').textContent = '👤'.repeat(count)
+        const techElement = document.getElementById('technicians')
+        const iconElement = document.getElementById('technicianIcons')
+        
+        if (!techElement || !iconElement) return
+        
+        const count = this.activeTechnicians.length
+        
+        if (count === 0) {
+            techElement.textContent = 'Vous seul'
+            iconElement.textContent = '👤'
+        } else {
+            techElement.textContent = `${count} tech.`
+            iconElement.textContent = '👤'.repeat(Math.min(count, 4))
+            iconElement.title = this.activeTechnicians.map(t => t.technician_name).join(', ')
+        }
     }
 
     setupOfflineSupport() {
@@ -914,6 +1066,16 @@ class DiagPVAudit {
         }
         return id
     }
+    
+    getTechnicianName() {
+        let name = localStorage.getItem('diagpv_technician_name')
+        if (!name) {
+            // Demander nom technicien si première utilisation
+            name = prompt('👤 Quel est votre nom/prénom pour la collaboration ?', 'Technicien') || 'Technicien'
+            localStorage.setItem('diagpv_technician_name', name)
+        }
+        return name
+    }
 
     showAlert(message, type = 'info') {
         // Suppression ancienne alerte
@@ -1230,6 +1392,27 @@ class DiagPVAudit {
             
             // Sauvegarde dans localStorage
             this.saveAuditToLocalStorage()
+
+            // Envoi batch serveur si online (v3.3)
+            if (navigator.onLine && this.realtimeEnabled) {
+                this.isSyncing = true
+                const syncPromises = modulesToUpdate.map(moduleId => 
+                    fetch(`${this.hubApiUrl}/api/audit/${this.auditToken}/module/${moduleId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            status: this.bulkActionStatus,
+                            comment: comment || null,
+                            technicianId: this.technicianId,
+                            technicianName: this.technicianName
+                        })
+                    }).catch(err => console.warn('⚠️ Sync module échoué:', moduleId))
+                )
+                
+                await Promise.all(syncPromises)
+                console.log('🌐 Batch sync serveur terminé:', modulesToUpdate.length, 'modules')
+                this.isSyncing = false
+            }
 
             // Re-rendu interface
             this.renderModulesGrid()

@@ -211,8 +211,12 @@
                         </div>
                         <div class="flex items-center space-x-4 text-sm">
                             <span>Progression: <span id="progress" class="text-green-400 font-black">0/0</span></span>
-                            <span>Techniciens: <span id="technicians" class="text-blue-400">0/4</span></span>
-                            <span id="technicianIcons">👤</span>
+                            <span>Techniciens: <span id="technicians" class="text-blue-400">Vous seul</span></span>
+                            <span id="technicianIcons" title="Techniciens connectés">👤</span>
+                            <span id="realtimeStatus" class="flex items-center" title="Statut collaboration temps réel">
+                                <i class="fas fa-circle text-xs text-green-400 mr-1 animate-pulse"></i>
+                                <span class="text-gray-400">Sync ON</span>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -420,6 +424,44 @@
         <!-- Scripts Audit -->
         <script src="/static/diagpv-audit.js"></script>
         <script src="/static/diagpv-measures.js"></script>
+        
+        <!-- Script indicateurs temps réel -->
+        <script>
+        // Mise à jour indicateurs statut collaboration temps réel
+        function updateRealtimeIndicators() {
+            const statusEl = document.getElementById('realtimeStatus')
+            if (!statusEl) return
+            
+            const app = window.diagpvAudit || window.app
+            if (!app) return
+            
+            const isOnline = navigator.onLine
+            const isEnabled = app.realtimeEnabled
+            
+            if (isOnline && isEnabled) {
+                statusEl.innerHTML = '<i class="fas fa-circle text-xs text-green-400 mr-1 animate-pulse"></i><span class="text-green-400">Sync ON</span>'
+                statusEl.title = 'Collaboration temps réel active'
+            } else if (!isOnline) {
+                statusEl.innerHTML = '<i class="fas fa-circle text-xs text-orange-400 mr-1"></i><span class="text-orange-400">Offline</span>'
+                statusEl.title = 'Mode hors-ligne - Sync lors reconnexion'
+            } else {
+                statusEl.innerHTML = '<i class="fas fa-circle text-xs text-gray-500 mr-1"></i><span class="text-gray-500">Sync OFF</span>'
+                statusEl.title = 'Collaboration temps réel désactivée'
+            }
+        }
+        
+        // Mise à jour toutes les 5 secondes
+        setInterval(updateRealtimeIndicators, 5000)
+        
+        // Mise à jour au chargement
+        window.addEventListener('load', () => {
+            setTimeout(updateRealtimeIndicators, 1000)
+        })
+        
+        // Mise à jour lors changement statut réseau
+        window.addEventListener('online', updateRealtimeIndicators)
+        window.addEventListener('offline', updateRealtimeIndicators)
+        </script>
         
         <!-- Script de Synchronisation DiagPV -->
         <script src="/js/diagpv-sync.js"></script>
