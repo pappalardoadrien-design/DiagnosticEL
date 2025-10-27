@@ -1,176 +1,218 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DiagPV Audit EL - Accueil</title>
+    <title>DiagPV - Mes Audits EL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { background: #000; color: #fff; font-family: system-ui; font-weight: bold; }
-        .audit-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(250, 204, 21, 0.4); }
-        .audit-card { transition: all 0.3s ease; }
+        body {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        }
+        .card-audit {
+            transition: all 0.3s ease;
+        }
+        .card-audit:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        .status-badge {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .7; }
+        }
     </style>
 </head>
-<body class="bg-black text-white min-h-screen">
-    
-    <div class="container mx-auto p-6 max-w-7xl">
-        
+<body class="h-full text-gray-100">
+    <div class="min-h-full">
         <!-- Header -->
-        <header class="mb-8 text-center">
-            <div class="flex items-center justify-center mb-4">
-                <i class="fas fa-solar-panel text-5xl text-yellow-400 mr-4"></i>
-                <div>
-                    <h1 class="text-4xl font-black">DIAGPV AUDIT ÉLECTROLUMINESCENCE</h1>
-                    <p class="text-xl text-gray-300 mt-2">Interface Terrain Nocturne</p>
+        <header class="bg-gray-900/50 backdrop-blur-sm border-b border-gray-800 sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <i class="fas fa-solar-panel text-4xl text-yellow-400"></i>
+                        <div>
+                            <h1 class="text-2xl font-bold text-white">DiagPV Audits</h1>
+                            <p class="text-sm text-gray-400">Électroluminescence Nocturne</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span id="technicianInfo" class="text-sm text-gray-300">
+                            <i class="fas fa-user mr-2"></i>
+                            <span id="technicianName">Chargement...</span>
+                        </span>
+                        <button onclick="app.showSettings()" class="text-gray-400 hover:text-white">
+                            <i class="fas fa-cog text-xl"></i>
+                        </button>
+                    </div>
                 </div>
-            </div>
-            <div class="flex items-center justify-center space-x-4 mt-4">
-                <a href="https://diagnostic-hub.pages.dev" target="_blank" 
-                   class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold transition">
-                    <i class="fas fa-home mr-2"></i>Hub DiagPV
-                </a>
             </div>
         </header>
 
-        <!-- Mes Audits -->
-        <section class="mb-12">
-            <div class="bg-gray-900 border-2 border-yellow-400 rounded-xl p-6">
-                <h2 class="text-3xl font-black text-yellow-400 mb-6 flex items-center">
-                    <i class="fas fa-list mr-3"></i>
-                    MES AUDITS EN COURS
-                </h2>
-                
-                <div id="auditsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- Audits chargés dynamiquement -->
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Actions -->
+            <div class="mb-8 flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <button onclick="app.createNewAudit()" 
+                            class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex items-center space-x-2">
+                        <i class="fas fa-plus"></i>
+                        <span>Nouvel Audit</span>
+                    </button>
+                    <button onclick="app.loadAudits()" 
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex items-center space-x-2">
+                        <i class="fas fa-sync"></i>
+                        <span>Actualiser</span>
+                    </button>
                 </div>
-
-                <div id="noAudits" class="hidden text-center py-12">
-                    <i class="fas fa-folder-open text-6xl text-gray-600 mb-4"></i>
-                    <p class="text-xl text-gray-400">Aucun audit trouvé</p>
-                    <p class="text-sm text-gray-500 mt-2">Vos audits apparaîtront ici automatiquement</p>
+                <div class="relative">
+                    <input type="text" 
+                           id="searchInput" 
+                           placeholder="Rechercher audit (client, token...)"
+                           class="bg-gray-800 text-white px-4 py-2 rounded-lg pl-10 w-80 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                           oninput="app.filterAudits(this.value)">
+                    <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                 </div>
             </div>
-        </section>
 
-        <!-- Bouton Créer Audit -->
-        <section class="text-center">
-            <button onclick="window.location.href='https://5643d3fa.diagpv-audit.pages.dev/'" 
-                    class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 px-12 py-6 rounded-xl text-2xl font-black shadow-2xl hover:shadow-green-500/50 transition-all duration-300">
-                <i class="fas fa-plus-circle mr-3"></i>
-                CRÉER UN NOUVEL AUDIT
-            </button>
-            <p class="text-gray-400 text-sm mt-4">
-                Utilisez l'interface complète pour créer un audit avec configuration détaillée
-            </p>
-        </section>
-
-    </div>
-
-    <!-- Script de Chargement Audits -->
-    <script>
-        console.log('🚀 Chargement page accueil DiagPV');
-
-        // Charger tous les audits depuis localStorage
-        function loadAudits() {
-            console.log('📂 Chargement audits depuis localStorage...');
-            
-            const auditsGrid = document.getElementById('auditsGrid');
-            const noAudits = document.getElementById('noAudits');
-            const audits = [];
-
-            // Parcourir localStorage
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                console.log('Clé localStorage:', key);
-                
-                if (key.startsWith('diagpv_audit_')) {
-                    try {
-                        const auditData = JSON.parse(localStorage.getItem(key));
-                        console.log('Audit trouvé:', auditData);
-                        
-                        audits.push({
-                            token: auditData.auditToken,
-                            projectName: auditData.auditData.project_name || 'Projet sans nom',
-                            clientName: auditData.auditData.client_name || 'Client inconnu',
-                            location: auditData.auditData.location || 'Localisation inconnue',
-                            moduleCount: auditData.modules ? auditData.modules.length : 0,
-                            createdAt: auditData.auditData.created_at || new Date().toISOString(),
-                            isSynced: localStorage.getItem(`diagpv_audit_${auditData.auditToken}_synced`) !== null
-                        });
-                    } catch (e) {
-                        console.error('❌ Erreur parsing audit:', key, e);
-                    }
-                }
-            }
-
-            console.log(`✅ ${audits.length} audit(s) trouvé(s)`);
-
-            if (audits.length === 0) {
-                noAudits.classList.remove('hidden');
-                auditsGrid.classList.add('hidden');
-                return;
-            }
-
-            // Trier par date (plus récent en premier)
-            audits.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-            // Afficher les audits
-            auditsGrid.innerHTML = audits.map(audit => `
-                <div class="audit-card bg-gray-800 border-2 ${audit.isSynced ? 'border-green-400' : 'border-orange-400'} rounded-lg p-6">
-                    <!-- Badge Sync -->
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="flex-1">
-                            <h3 class="text-2xl font-black text-yellow-400 mb-1">${audit.projectName}</h3>
-                            <p class="text-gray-300 text-sm font-normal">${audit.clientName}</p>
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm mb-1">Total Audits</p>
+                            <p id="statTotal" class="text-3xl font-bold text-white">0</p>
                         </div>
-                        ${audit.isSynced 
-                            ? '<span class="bg-green-600 px-3 py-1 rounded-full text-xs font-bold"><i class="fas fa-check mr-1"></i>Synced</span>'
-                            : '<span class="bg-orange-600 px-3 py-1 rounded-full text-xs font-bold"><i class="fas fa-clock mr-1"></i>Local</span>'
-                        }
-                    </div>
-
-                    <!-- Infos -->
-                    <div class="space-y-2 mb-4">
-                        <div class="flex items-center text-sm text-gray-400 font-normal">
-                            <i class="fas fa-map-marker-alt w-5 mr-2"></i>
-                            ${audit.location}
-                        </div>
-                        <div class="flex items-center text-sm text-gray-400 font-normal">
-                            <i class="fas fa-solar-panel w-5 mr-2"></i>
-                            <span class="text-green-400 font-bold">${audit.moduleCount} modules</span>
-                        </div>
-                        <div class="flex items-center text-sm text-gray-400 font-normal">
-                            <i class="fas fa-calendar w-5 mr-2"></i>
-                            ${new Date(audit.createdAt).toLocaleDateString('fr-FR', { 
-                                day: '2-digit', 
-                                month: 'short', 
-                                year: 'numeric' 
-                            })}
-                        </div>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="grid grid-cols-2 gap-2">
-                        <a href="/audit.html?token=${audit.token}" 
-                           class="bg-orange-600 hover:bg-orange-700 py-3 px-4 rounded-lg text-center font-bold transition">
-                            <i class="fas fa-eye mr-2"></i>Ouvrir
-                        </a>
-                        <a href="https://diagnostic-hub.pages.dev/projects" target="_blank"
-                           class="bg-blue-600 hover:bg-blue-700 py-3 px-4 rounded-lg text-center font-bold transition">
-                            <i class="fas fa-external-link-alt mr-2"></i>Hub
-                        </a>
+                        <i class="fas fa-clipboard-list text-3xl text-blue-400"></i>
                     </div>
                 </div>
-            `).join('');
-        }
+                <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm mb-1">En Cours</p>
+                            <p id="statEnCours" class="text-3xl font-bold text-yellow-400">0</p>
+                        </div>
+                        <i class="fas fa-hourglass-half text-3xl text-yellow-400"></i>
+                    </div>
+                </div>
+                <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm mb-1">Terminés</p>
+                            <p id="statTermines" class="text-3xl font-bold text-green-400">0</p>
+                        </div>
+                        <i class="fas fa-check-circle text-3xl text-green-400"></i>
+                    </div>
+                </div>
+                <div class="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 border border-gray-700">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-gray-400 text-sm mb-1">Modules OK</p>
+                            <p id="statModulesOk" class="text-3xl font-bold text-green-400">0</p>
+                        </div>
+                        <i class="fas fa-solar-panel text-3xl text-green-400"></i>
+                    </div>
+                </div>
+            </div>
 
-        // Initialisation
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('✅ DOM chargé, lancement loadAudits()');
-            loadAudits();
-        });
-    </script>
+            <!-- Audits List -->
+            <div>
+                <h2 class="text-xl font-bold text-white mb-4 flex items-center">
+                    <i class="fas fa-folder-open mr-2 text-yellow-400"></i>
+                    Mes Audits
+                </h2>
+                <div id="auditsList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Chargement -->
+                    <div class="col-span-full text-center py-12">
+                        <i class="fas fa-spinner fa-spin text-4xl text-blue-400 mb-4"></i>
+                        <p class="text-gray-400">Chargement de vos audits...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
 
+    <!-- Modal Nouvel Audit -->
+    <div id="modalNewAudit" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 border border-gray-700">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-white flex items-center">
+                        <i class="fas fa-plus-circle mr-2 text-green-400"></i>
+                        Créer un Audit
+                    </h3>
+                    <button onclick="app.closeModal()" class="text-gray-400 hover:text-white">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+
+                <form id="formNewAudit" onsubmit="app.submitNewAudit(event)">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">
+                                <i class="fas fa-building mr-2"></i>Nom Client *
+                            </label>
+                            <input type="text" 
+                                   id="inputClientName" 
+                                   required
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                   placeholder="Ex: Centrale Solaire JALIBAT">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">
+                                <i class="fas fa-map-marker-alt mr-2"></i>Adresse Installation
+                            </label>
+                            <input type="text" 
+                                   id="inputAddress" 
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                   placeholder="Ex: Zone Industrielle, 13000 Marseille">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">
+                                <i class="fas fa-bolt mr-2"></i>Puissance Installation (kWc)
+                            </label>
+                            <input type="number" 
+                                   id="inputPowerKwc" 
+                                   step="0.1"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                   placeholder="Ex: 250">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">
+                                <i class="fas fa-solar-panel mr-2"></i>Nombre Total Modules *
+                            </label>
+                            <input type="number" 
+                                   id="inputTotalModules" 
+                                   required
+                                   min="1"
+                                   class="w-full bg-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                   placeholder="Ex: 242">
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex items-center space-x-4">
+                        <button type="submit" 
+                                class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-all">
+                            <i class="fas fa-check mr-2"></i>Créer l'Audit
+                        </button>
+                        <button type="button" 
+                                onclick="app.closeModal()"
+                                class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-lg transition-all">
+                            Annuler
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+    <script src="/static/diagpv-home.js"></script>
 </body>
 </html>

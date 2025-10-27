@@ -82,10 +82,91 @@ class DiagPVAudit {
             }
             localStorage.setItem(`diagpv_audit_${this.auditToken}`, JSON.stringify(auditData))
             console.log('💾 Audit sauvegardé dans localStorage')
+            
+            // Sync cloud automatique toutes les 30s (v3.4)
+            this.scheduleCloudSync()
         } catch (error) {
             console.error('❌ Erreur sauvegarde localStorage:', error)
         }
     }
+
+    // ============================================================================
+    // SYNCHRONISATION CLOUD AUTOMATIQUE v3.4
+    // Objectif : Sauvegarder audit complet en cloud pour accès multi-appareils
+    // ============================================================================
+
+    scheduleCloudSync() {
+        // Éviter multiples timers
+        if (this.cloudSyncTimer) {
+            clearTimeout(this.cloudSyncTimer)
+        }
+        
+        // Sync dans 30s
+        this.cloudSyncTimer = setTimeout(() => {
+            this.syncAuditToCloud()
+        }, 30000)
+    }
+
+    async syncAuditToCloud() {
+        if (!navigator.onLine || this.isSyncing) {
+            console.log('⏸️ Cloud sync skipped (offline ou déjà en cours)')
+            return
+        }
+
+        try {
+            this.isSyncing = true
+            console.log('☁️ Synchronisation cloud...')
+
+            // Préparer données audit
+            const modulesOk = Array.from(this.modules.values()).filter(m => m.status === 'OK').length
+            const modulesKo = Array.from(this.modules.values()).filter(m => m.status === 'KO').length
+            const modulesARevoir = Array.from(this.modules.values()).filter(m => m.status === 'À REVOIR').length
+
+            const auditPayload = {
+                audit: {
+                    totalModules: this.modules.size,
+                    modulesOk,
+                    modulesKo,
+                    modulesARevoir
+                },
+                modules: Array.from(this.modules.values()).map(m => ({
+                    id: m.id,
+                    string: m.string_number,
+                    position: m.position,
+                    status: m.status,
+                    comment: m.comment,
+                    defects: m.defects || [],
+                    photoEL: m.photo_el || null,
+                    technicianId: this.technicianId,
+                    technicianName: this.technicianName
+                }))
+            }
+
+            const response = await fetch(`${this.hubApiUrl}/api/audits/${this.auditToken}/save`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(auditPayload)
+            })
+
+            const result = await response.json()
+
+            if (result.success) {
+                console.log('✅ Audit synchronisé en cloud')
+                this.showAlert('✅ Audit sauvegardé en cloud', 'success', 2000)
+            } else {
+                throw new Error(result.error || 'Erreur sync cloud')
+            }
+        } catch (error) {
+            console.error('❌ Erreur sync cloud:', error)
+            // Ne pas afficher d'alerte pour ne pas gêner l'utilisateur
+        } finally {
+            this.isSyncing = false
+        }
+    }
+
+    // ============================================================================
+    // FIN SYNCHRONISATION CLOUD
+    // ============================================================================
 
     setupInterface() {
         // Mise à jour titre et informations
