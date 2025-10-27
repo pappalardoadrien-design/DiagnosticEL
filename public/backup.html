@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DiagPV - Gestionnaire de Sauvegardes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        .status-success { color: #27ae60; }
+        .status-error { color: #e74c3c; }
+        .status-warning { color: #f39c12; }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Header -->
+    <header class="bg-gray-800 shadow-lg border-b border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-yellow-400 flex items-center">
+                        <i class="fas fa-shield-alt mr-3"></i>
+                        Gestionnaire de Sauvegardes
+                    </h1>
+                    <p class="text-sm text-gray-400 mt-1">Protection et export des données DiagPV</p>
+                </div>
+                <a href="/index.html" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>Retour Accueil
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <!-- Statistiques -->
+        <div class="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <div class="flex items-center">
+                    <i class="fas fa-database text-blue-400 text-3xl"></i>
+                    <div class="ml-4">
+                        <div class="text-sm text-gray-400">Audits Locaux</div>
+                        <div id="total-audits" class="text-2xl font-bold">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <div class="flex items-center">
+                    <i class="fas fa-hdd text-green-400 text-3xl"></i>
+                    <div class="ml-4">
+                        <div class="text-sm text-gray-400">Espace Utilisé</div>
+                        <div id="total-size" class="text-2xl font-bold">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <div class="flex items-center">
+                    <i class="fas fa-clock text-yellow-400 text-3xl"></i>
+                    <div class="ml-4">
+                        <div class="text-sm text-gray-400">Dernière Sauvegarde</div>
+                        <div id="last-backup" class="text-sm font-medium">Jamais</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+                <div class="flex items-center">
+                    <i id="auto-icon" class="fas fa-shield-check text-green-400 text-3xl"></i>
+                    <div class="ml-4">
+                        <div class="text-sm text-gray-400">Protection</div>
+                        <div id="auto-status" class="text-sm font-bold text-green-400">Active</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions Rapides -->
+        <div class="mb-6 bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-lg font-bold mb-4 text-yellow-400">Actions Rapides</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button id="btn-backup-full" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold transition-all">
+                    <i class="fas fa-save mr-2"></i>Sauvegarde Complète
+                </button>
+
+                <button id="btn-export-json" class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-bold transition-all">
+                    <i class="fas fa-download mr-2"></i>Export JSON
+                </button>
+
+                <button id="btn-import-json" class="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg font-bold transition-all">
+                    <i class="fas fa-upload mr-2"></i>Import JSON
+                </button>
+            </div>
+        </div>
+
+        <!-- Liste Audits -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-yellow-400">Audits Sauvegardés</h3>
+                <button id="btn-refresh" class="text-sm text-blue-400 hover:text-blue-300">
+                    <i class="fas fa-sync-alt mr-1"></i>Actualiser
+                </button>
+            </div>
+
+            <div id="audits-list" class="space-y-3">
+                <!-- Sera rempli par JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Input caché pour import -->
+    <input type="file" id="file-import" accept=".json" class="hidden">
+
+    <script>
+        class BackupManager {
+            constructor() {
+                this.hubApiUrl = 'https://diagnostic-hub.pages.dev'
+                this.init()
+            }
+
+            async init() {
+                await this.loadStats()
+                await this.loadAudits()
+                this.setupEventListeners()
+                
+                // Auto-refresh toutes les 10s
+                setInterval(() => this.loadStats(), 10000)
+            }
+
+            setupEventListeners() {
+                document.getElementById('btn-backup-full').addEventListener('click', () => this.backupFull())
+                document.getElementById('btn-export-json').addEventListener('click', () => this.exportJSON())
+                document.getElementById('btn-import-json').addEventListener('click', () => {
+                    document.getElementById('file-import').click()
+                })
+                document.getElementById('file-import').addEventListener('change', (e) => this.importJSON(e))
+                document.getElementById('btn-refresh').addEventListener('click', () => {
+                    this.loadStats()
+                    this.loadAudits()
+                })
+            }
+
+            async loadStats() {
+                try {
+                    // Compter audits localStorage
+                    const keys = Object.keys(localStorage)
+                    const auditKeys = keys.filter(k => k.startsWith('diagpv_audit_') && !k.endsWith('_synced'))
+                    
+                    document.getElementById('total-audits').textContent = auditKeys.length
+
+                    // Calculer taille
+                    let totalSize = 0
+                    keys.forEach(key => {
+                        const value = localStorage.getItem(key)
+                        totalSize += key.length + (value ? value.length : 0)
+                    })
+                    
+                    document.getElementById('total-size').textContent = this.formatBytes(totalSize)
+
+                    // Dernière sauvegarde
+                    const lastBackup = localStorage.getItem('diagpv_last_backup')
+                    if (lastBackup) {
+                        const date = new Date(parseInt(lastBackup))
+                        document.getElementById('last-backup').textContent = this.formatDate(date)
+                    }
+                } catch (error) {
+                    console.error('Erreur chargement stats:', error)
+                }
+            }
+
+            async loadAudits() {
+                try {
+                    const keys = Object.keys(localStorage)
+                    const auditKeys = keys.filter(k => k.startsWith('diagpv_audit_') && !k.endsWith('_synced'))
+                    
+                    const auditsHtml = auditKeys.map(key => {
+                        try {
+                            const data = JSON.parse(localStorage.getItem(key))
+                            const token = key.replace('diagpv_audit_', '')
+                            const size = this.formatBytes(key.length + localStorage.getItem(key).length)
+                            const isSynced = localStorage.getItem(key + '_synced') === 'true'
+                            
+                            return `
+                                <div class="bg-gray-700 rounded-lg p-4 flex items-center justify-between border border-gray-600 hover:border-yellow-400 transition-colors">
+                                    <div class="flex-1">
+                                        <div class="font-bold text-white">${this.escapeHtml(data.auditData?.project_name || data.clientName || 'Audit sans nom')}</div>
+                                        <div class="text-sm text-gray-400 mt-1">
+                                            ${this.escapeHtml(data.auditData?.client_name || data.clientName || 'Client inconnu')} • 
+                                            ${data.modules?.length || data.totalModules || 0} modules • 
+                                            ${size}
+                                        </div>
+                                        <div class="text-xs text-gray-500 mt-1">Token: ${token.substring(0, 20)}...</div>
+                                    </div>
+                                    <div class="flex items-center space-x-3">
+                                        ${isSynced ? '<span class="px-2 py-1 bg-green-600 text-xs rounded">Synced</span>' : '<span class="px-2 py-1 bg-orange-600 text-xs rounded">Local</span>'}
+                                        <button onclick="backupMgr.exportAudit('${token}')" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-sm">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                        <button onclick="backupMgr.deleteAudit('${token}')" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `
+                        } catch (e) {
+                            return ''
+                        }
+                    }).filter(h => h).join('')
+
+                    document.getElementById('audits-list').innerHTML = auditsHtml || '<div class="text-center text-gray-500 py-8">Aucun audit trouvé</div>'
+                } catch (error) {
+                    console.error('Erreur chargement audits:', error)
+                }
+            }
+
+            async backupFull() {
+                try {
+                    const data = this.gatherAllData()
+                    const json = JSON.stringify(data, null, 2)
+                    const blob = new Blob([json], { type: 'application/json' })
+                    const url = URL.createObjectURL(blob)
+                    
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `diagpv-backup-${new Date().toISOString().split('T')[0]}.json`
+                    a.click()
+                    
+                    URL.revokeObjectURL(url)
+                    
+                    localStorage.setItem('diagpv_last_backup', Date.now().toString())
+                    this.showAlert('✅ Sauvegarde complète réussie', 'success')
+                    this.loadStats()
+                } catch (error) {
+                    this.showAlert('❌ Erreur sauvegarde: ' + error.message, 'error')
+                }
+            }
+
+            async exportJSON() {
+                await this.backupFull()
+            }
+
+            exportAudit(token) {
+                try {
+                    const data = localStorage.getItem(`diagpv_audit_${token}`)
+                    if (!data) {
+                        this.showAlert('❌ Audit introuvable', 'error')
+                        return
+                    }
+                    
+                    const blob = new Blob([data], { type: 'application/json' })
+                    const url = URL.createObjectURL(blob)
+                    
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `audit-${token.substring(0, 8)}.json`
+                    a.click()
+                    
+                    URL.revokeObjectURL(url)
+                    this.showAlert('✅ Audit exporté', 'success')
+                } catch (error) {
+                    this.showAlert('❌ Erreur export: ' + error.message, 'error')
+                }
+            }
+
+            async importJSON(event) {
+                try {
+                    const file = event.target.files[0]
+                    if (!file) return
+                    
+                    const text = await file.text()
+                    const data = JSON.parse(text)
+                    
+                    // Vérifier si backup complet ou audit seul
+                    if (data.audits && data.metadata) {
+                        // Backup complet
+                        let imported = 0
+                        for (const [key, value] of Object.entries(data.audits)) {
+                            localStorage.setItem(key, JSON.stringify(value))
+                            imported++
+                        }
+                        this.showAlert(`✅ ${imported} audits importés`, 'success')
+                    } else if (data.auditToken || data.token) {
+                        // Audit seul
+                        const token = data.auditToken || data.token
+                        localStorage.setItem(`diagpv_audit_${token}`, JSON.stringify(data))
+                        this.showAlert('✅ Audit importé', 'success')
+                    } else {
+                        this.showAlert('❌ Format JSON non reconnu', 'error')
+                    }
+                    
+                    this.loadStats()
+                    this.loadAudits()
+                } catch (error) {
+                    this.showAlert('❌ Erreur import: ' + error.message, 'error')
+                }
+            }
+
+            deleteAudit(token) {
+                if (!confirm('Supprimer cet audit ? Cette action est irréversible.')) return
+                
+                try {
+                    localStorage.removeItem(`diagpv_audit_${token}`)
+                    localStorage.removeItem(`diagpv_audit_${token}_synced`)
+                    this.showAlert('✅ Audit supprimé', 'success')
+                    this.loadStats()
+                    this.loadAudits()
+                } catch (error) {
+                    this.showAlert('❌ Erreur suppression: ' + error.message, 'error')
+                }
+            }
+
+            gatherAllData() {
+                const data = {
+                    metadata: {
+                        version: '3.6',
+                        exportDate: new Date().toISOString(),
+                        browser: navigator.userAgent,
+                        totalSize: this.calculateTotalSize()
+                    },
+                    audits: {},
+                    settings: {}
+                }
+
+                // Collecter tous les audits
+                const keys = Object.keys(localStorage)
+                keys.forEach(key => {
+                    if (key.startsWith('diagpv_audit_') && !key.endsWith('_synced')) {
+                        try {
+                            data.audits[key] = JSON.parse(localStorage.getItem(key))
+                        } catch (e) {
+                            console.error('Erreur parsing', key, e)
+                        }
+                    } else if (key.startsWith('diagpv_')) {
+                        data.settings[key] = localStorage.getItem(key)
+                    }
+                })
+
+                return data
+            }
+
+            calculateTotalSize() {
+                let total = 0
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i)
+                    const value = localStorage.getItem(key)
+                    total += key.length + (value ? value.length : 0)
+                }
+                return total
+            }
+
+            formatBytes(bytes) {
+                if (bytes === 0) return '0 B'
+                const k = 1024
+                const sizes = ['B', 'KB', 'MB', 'GB']
+                const i = Math.floor(Math.log(bytes) / Math.log(k))
+                return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+            }
+
+            formatDate(date) {
+                const now = new Date()
+                const diff = now - date
+                const minutes = Math.floor(diff / 60000)
+                const hours = Math.floor(diff / 3600000)
+                const days = Math.floor(diff / 86400000)
+                
+                if (minutes < 1) return 'À l\'instant'
+                if (minutes < 60) return `Il y a ${minutes}min`
+                if (hours < 24) return `Il y a ${hours}h`
+                return `Il y a ${days}j`
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div')
+                div.textContent = text
+                return div.innerHTML
+            }
+
+            showAlert(message, type = 'info') {
+                const alertDiv = document.createElement('div')
+                const colors = {
+                    success: 'bg-green-600',
+                    error: 'bg-red-600',
+                    warning: 'bg-yellow-600',
+                    info: 'bg-blue-600'
+                }
+                
+                alertDiv.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in`
+                alertDiv.textContent = message
+                
+                document.body.appendChild(alertDiv)
+                
+                setTimeout(() => {
+                    alertDiv.remove()
+                }, 3000)
+            }
+        }
+
+        // Initialiser
+        const backupMgr = new BackupManager()
+        window.backupMgr = backupMgr
+    </script>
+</body>
+</html>

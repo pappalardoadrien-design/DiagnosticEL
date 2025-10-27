@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1e293b">
+    <meta name="description" content="Application professionnelle d'audit photovoltaïque par électroluminescence">
+    <link rel="manifest" href="/manifest.json">
     <title>DiagPV - Mes Audits EL</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
@@ -67,6 +70,11 @@
                         <i class="fas fa-sync"></i>
                         <span>Actualiser</span>
                     </button>
+                    <a href="/backup.html"
+                       class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex items-center space-x-2">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Sauvegardes</span>
+                    </a>
                 </div>
                 <div class="relative">
                     <input type="text" 
@@ -317,5 +325,59 @@
 
     <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
     <script src="/static/diagpv-home.js"></script>
+    
+    <!-- PWA Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => {
+                        console.log('✅ Service Worker enregistré', reg.scope)
+                        
+                        // Vérifier updates
+                        reg.addEventListener('updatefound', () => {
+                            const newWorker = reg.installing
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('🔄 Nouvelle version disponible')
+                                    if (confirm('Nouvelle version disponible ! Actualiser ?')) {
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' })
+                                        window.location.reload()
+                                    }
+                                }
+                            })
+                        })
+                    })
+                    .catch(err => console.error('❌ Service Worker erreur:', err))
+            })
+        }
+
+        // Install prompt PWA
+        let deferredPrompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault()
+            deferredPrompt = e
+            
+            // Afficher bouton install si pas déjà installé
+            if (!window.matchMedia('(display-mode: standalone)').matches) {
+                const installBtn = document.createElement('button')
+                installBtn.innerHTML = '<i class="fas fa-download mr-2"></i>Installer l\'app'
+                installBtn.className = 'fixed bottom-4 right-4 bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-6 rounded-lg shadow-lg z-50 transition-all'
+                installBtn.onclick = async () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt()
+                        const { outcome } = await deferredPrompt.userChoice
+                        console.log(`Installation: ${outcome}`)
+                        deferredPrompt = null
+                        installBtn.remove()
+                    }
+                }
+                document.body.appendChild(installBtn)
+                
+                // Cacher après 10s si pas cliqué
+                setTimeout(() => installBtn.remove(), 10000)
+            }
+        })
+    </script>
 </body>
 </html>
